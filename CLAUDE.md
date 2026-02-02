@@ -2,6 +2,10 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## 進捗状況
+
+**セッション開始時に必ず [docs/STATUS.md](docs/STATUS.md) を確認すること。**
+
 ## プロジェクト概要
 
 音声操作対応のスポーツスコアボードアプリ（React Native + Expo）。
