@@ -11,23 +11,33 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 音声操作対応のスポーツスコアボードアプリ（React Native + Expo）。
 バレーボール練習時の得点板代わりに使用。学習目的を兼ねた個人開発。
 
+## パッケージマネージャー
+
+**bun を使用（npm/yarn は使用しない）**
+
+> **注意**: bunをメインで使用しますが、Node.js LTSも必要です。
+> Expoの一部コマンド（`expo prebuild`、`eas build`など）が内部で`npm pack`を呼び出すため。
+
 ## コマンド
 
 ```bash
+# 依存関係インストール
+bun install
+
 # 開発サーバー起動
-npm start
+bun start
 
 # テスト実行
-npm test
+bun test
 
 # 単一テスト実行
-npm test -- --testPathPattern="ファイル名"
+bun test --testPathPattern="ファイル名"
 
 # リント
-npm run lint
+bun run lint
 
 # 型チェック
-npm run typecheck
+bun run typecheck
 
 # Preview Build（Android実機テスト用）
 eas build --platform android --profile preview
