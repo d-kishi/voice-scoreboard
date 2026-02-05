@@ -16,19 +16,18 @@ Voice Scoreboardプロジェクトの開発環境構築手順です。
 
 以下のツールがインストール済みであることを確認してください。
 
-- [ ] VSCode
-- [ ] Docker Desktop
-- [ ] WSL2 (Ubuntu)
+- [x] VSCode
+- [x] Docker Desktop
+- [x] WSL2 (Ubuntu)
 
 ### VSCode拡張機能
 
 以下の拡張機能をインストールしてください。
 
-- [ ] **Dev Containers** - コンテナ開発環境
-- [ ] **Remote - WSL** - WSL連携
-- [ ] **ESLint** - Linter
-- [ ] **Prettier** - コードフォーマッター
-- [ ] **TypeScript and JavaScript Language Features** - 言語サポート（ビルトイン）
+- [x] **Dev Containers** - コンテナ開発環境
+- [x] **Remote - WSL** - WSL連携
+- [x] **ESLint** - Linter
+- [x] **Prettier** - コードフォーマッター
 
 ### Android Studio
 
@@ -36,41 +35,45 @@ Android実機テストやエミュレータを使用する場合に必要です�
 
 #### インストール
 
-- [ ] [Android Studio公式サイト](https://developer.android.com/studio)からダウンロード
-- [ ] インストーラーを実行
-- [ ] セットアップウィザードを完了
+- [x] [Android Studio公式サイト](https://developer.android.com/studio)からダウンロード
+- [x] インストーラーを実行
+- [x] セットアップウィザードを完了
 
 #### SDK Managerの設定
 
-Android Studioを起動し、`Tools > SDK Manager` から以下をインストールしてください。
+Android Studioを起動し、SDK Managerを開いてください。
+- プロジェクトを開いている場合: `Tools > SDK Manager`
+- Welcome画面の場合: `Projects` タブを選択 → `More Actions > SDK Manager`
 
 **SDK Platforms タブ:**
-- [ ] Android 14 (API 34) または最新の安定版
+- [x] Android 16 (API 36) ※実機に合わせる
 
 **SDK Tools タブ:**
-- [ ] Android SDK Build-Tools
-- [ ] Android SDK Command-line Tools
-- [ ] Android SDK Platform-Tools
-- [ ] Android Emulator
+- [x] Android SDK Build-Tools
+- [x] Android SDK Command-line Tools
+- [x] Android SDK Platform-Tools
+- [x] Android Emulator
 
 #### 環境変数の設定
 
 Windows環境変数に以下を追加してください。
 
-- [ ] `ANDROID_HOME` を設定
+- [x] `ANDROID_HOME` を設定
   - 通常: `C:\Users\<ユーザー名>\AppData\Local\Android\Sdk`
 
-- [ ] `PATH` に以下を追加
+- [x] `PATH` に以下を追加
   - `%ANDROID_HOME%\platform-tools`
   - `%ANDROID_HOME%\emulator`
 
 #### エミュレータの作成（任意）
 
-- [ ] Android Studio > `Tools > Device Manager`
-- [ ] `Create Device` をクリック
-- [ ] デバイスを選択（例: Pixel 6）
-- [ ] システムイメージを選択（API 34推奨）
-- [ ] エミュレータを作成
+- [x] Device Managerを開く
+  - プロジェクトを開いている場合: `Tools > Device Manager`
+  - Welcome画面の場合: `Projects` タブを選択 → `More Actions > Virtual Device Manager`
+- [x] `Create Device` をクリック
+- [x] デバイスを選択（例: Pixel 6）
+- [x] システムイメージを選択（API 36 ※実機に合わせる）
+- [x] エミュレータを作成
 
 ---
 
@@ -87,9 +90,9 @@ bun --version    # v1.3.8以上（mise経由）
 git --version    # v2.43.0以上
 ```
 
-- [ ] mise (v2026.1.11)
-- [ ] bun (v1.3.8 via mise)
-- [ ] git (v2.43.0)
+- [x] mise (v2026.1.11)
+- [x] bun (v1.3.8 via mise)
+- [x] git (v2.43.0)
 
 ### Node.js LTSのインストール
 
@@ -97,18 +100,18 @@ git --version    # v2.43.0以上
 >
 > bunをメインのパッケージマネージャーとして使用しますが、Expoの一部コマンド（特に`expo prebuild`や`eas build`）が内部で`npm pack`を呼び出すため、Node.jsも必要です。
 
-- [ ] mise経由でNode.js LTSをインストール
+- [x] mise経由でNode.js LTSをインストール
   ```bash
   mise use node@lts
   ```
 
-- [ ] バージョン確認
+- [x] バージョン確認
   ```bash
   node --version
-  # v22.x.x（LTS）が表示されること
+  # LTSバージョンが表示されること
   ```
 
-- [ ] npmが利用可能か確認
+- [x] npmが利用可能か確認
   ```bash
   npm --version
   ```
@@ -117,18 +120,18 @@ git --version    # v2.43.0以上
 
 Android開発に必要なJDKをインストールします。
 
-- [ ] mise経由でJDK 17をインストール
+- [x] mise経由でJDK 17をインストール
   ```bash
   mise use java@temurin-17
   ```
 
-- [ ] バージョン確認
+- [x] バージョン確認
   ```bash
   java --version
   # openjdk 17.x.x が表示されること
   ```
 
-- [ ] JAVA_HOMEが設定されているか確認
+- [x] JAVA_HOMEが設定されているか確認
   ```bash
   echo $JAVA_HOME
   # パスが表示されること
@@ -138,25 +141,35 @@ Android開発に必要なJDKをインストールします。
 
 Expo Application Services (EAS) のCLIをインストールします。
 
-- [ ] bunでグローバルインストール
+- [x] bunでグローバルインストール
   ```bash
   bun install -g eas-cli
   ```
 
-- [ ] バージョン確認
+- [x] bunのグローバルbinフォルダをPATHに追加（未設定の場合）
+  ```bash
+  # ~/.bashrc または ~/.zshrc に追加
+  export PATH="$HOME/.bun/bin:$PATH"
+  ```
+  ```bash
+  # 反映
+  source ~/.bashrc
+  ```
+
+- [x] バージョン確認
   ```bash
   eas --version
   ```
 
-- [ ] Expoアカウントを作成（まだの場合）
+- [x] Expoアカウントを作成（まだの場合）
   - [expo.dev](https://expo.dev/signup) でアカウント作成
 
-- [ ] EAS CLIでログイン
+- [x] EAS CLIでログイン
   ```bash
   eas login
   ```
 
-- [ ] ログイン確認
+- [x] ログイン確認
   ```bash
   eas whoami
   # ユーザー名が表示されること
@@ -168,7 +181,7 @@ Expo Application Services (EAS) のCLIをインストールします。
 
 > **注意**: WSL環境ではWatchmanの恩恵が限定的な場合があります。問題が発生した場合にインストールを検討してください。
 
-- [ ] 必要に応じてインストール
+- [x] 必要に応じてインストール
   ```bash
   # Ubuntuの場合
   sudo apt update
@@ -195,11 +208,11 @@ echo "mise: $(mise --version)"
 
 ### チェックリスト
 
-- [ ] Node.js LTSがインストールされている
-- [ ] bunがインストールされている
-- [ ] Java 17がインストールされている
-- [ ] EAS CLIがインストールされ、ログイン済み
-- [ ] Android SDK（Windows側）がインストールされている
+- [x] Node.js LTSがインストールされている
+- [x] bunがインストールされている
+- [x] Java 17がインストールされている
+- [x] EAS CLIがインストールされ、ログイン済み
+- [x] Android SDK（Windows側）がインストールされている
 
 ---
 
