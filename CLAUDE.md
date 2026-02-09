@@ -109,6 +109,10 @@ const handleSpeechResult = (result: string) => {
 - React Native / Expo特有の概念は補足説明を追加
 - 「なぜそうしないか」も必要に応じて記載
 
+## Claude Code設定
+
+- **Agent Teams**: 有効（ユーザ設定 `~/.claude/settings.json` で `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` を設定済み）
+
 ## 制約事項
 
 - **Expo Goは使用不可**: 音声認識（@react-native-voice/voice）にネイティブモジュールが必要

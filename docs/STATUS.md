@@ -8,7 +8,7 @@
 | Gitリポジトリ | ✅ 作成済み（GitHub Public） |
 | CLAUDE.md | ✅ 作成済み |
 | 環境構築 | ✅ 完了（Windows + WSL + Android Studio） |
-| DevContainer | ⏳ 未着手 |
+| DevContainer | ✅ 完了 |
 | cc-sdd | ⏳ 未着手 |
 | CodeRabbit | ⏳ 未着手 |
 | Figma Make | ⏳ 未着手 |
@@ -17,8 +17,7 @@
 
 ## 次回のタスク
 
-1. **DevContainer設定** - 開発コンテナ構築
-2. **cc-sddセットアップ** - SDDワークフロー導入
+1. **cc-sddセットアップ** - SDDワークフロー導入
 3. **CodeRabbit導入** - AIレビュー設定
 4. **Figma Makeセットアップ** - 画面レイアウト設計
 5. **設計書作成** - SDDで仕様→要件→技術設計→タスク分解
@@ -33,6 +32,7 @@
 - [x] Gitリポジトリ作成・初回コミット
 - [x] CLAUDE.md作成
 - [x] 環境構築手順書作成・環境構築実施
+- [x] DevContainer構築（Dockerfile + mise + post-create.sh + VSCode設定）
 
 ## メモ
 
@@ -43,4 +43,4 @@
 
 ---
 
-*最終更新: 2026-02-06*
+*最終更新: 2026-02-09*
