@@ -9,19 +9,17 @@
 | CLAUDE.md | ✅ 作成済み |
 | 環境構築 | ✅ 完了（Windows + WSL + Android Studio） |
 | DevContainer | ✅ 完了 |
-| cc-sdd | ⏳ 未着手 |
-| CodeRabbit | ⏳ 未着手 |
+| cc-sdd | ✅ 完了（--claude、11コマンド） |
+| CodeRabbit | ✅ 完了（GitHub App + CLI + Claude Code プラグイン） |
 | Figma Make | ⏳ 未着手 |
 | 設計書 | ⏳ 未着手 |
 | Expoプロジェクト | ⏳ 未着手 |
 
 ## 次回のタスク
 
-1. **cc-sddセットアップ** - SDDワークフロー導入
-3. **CodeRabbit導入** - AIレビュー設定
-4. **Figma Makeセットアップ** - 画面レイアウト設計
-5. **設計書作成** - SDDで仕様→要件→技術設計→タスク分解
-6. **Expoプロジェクト初期化** - 設計に基づき実装開始
+1. **Figma Makeセットアップ** - 画面レイアウト設計
+2. **設計書作成** - SDDで仕様→要件→技術設計→タスク分解
+3. **Expoプロジェクト初期化** - 設計に基づき実装開始
 
 ## 完了済みタスク
 
@@ -33,6 +31,10 @@
 - [x] CLAUDE.md作成
 - [x] 環境構築手順書作成・環境構築実施
 - [x] DevContainer構築（Dockerfile + mise + post-create.sh + VSCode設定）
+- [x] cc-sddセットアップ（--claude、11コマンド）
+- [x] CodeRabbit導入（.coderabbit.yaml作成、GitHub Appは要インストール）
+- [x] CodeRabbit CLI導入（v0.3.5、WSL環境で認証・レビュー動作確認済み）
+- [x] CodeRabbit Claude Codeプラグイン導入（coderabbit:review）
 
 ## メモ
 
@@ -43,4 +45,4 @@
 
 ---
 
-*最終更新: 2026-02-09*
+*最終更新: 2026-02-11*

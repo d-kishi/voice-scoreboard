@@ -119,6 +119,11 @@ const handleSpeechResult = (result: string) => {
 - **横画面専用**: ランドスケープモードのみ対応
 - **日本語音声認識**: ja-JP ロケールを使用
 
+## cc-sdd
+
+- 現在: `--claude`（11コマンド）で運用中
+- 近日: `--claude-agent`（12コマンド + 9サブエージェント）に移行予定
+
 ## 学習ドキュメント
 
 開発中に `docs/learning/` へ以下を生成する：

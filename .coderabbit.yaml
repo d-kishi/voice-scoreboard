@@ -1,0 +1,57 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+language: "ja-JP"
+
+tone_instructions: >-
+  React Native初学者向けの教育的なトーンでレビューしてください。
+  なぜその変更が推奨されるのかの理由も含めてください。
+
+early_access: false
+enable_free_tier: true
+
+reviews:
+  profile: "chill"
+  request_changes_workflow: false
+  high_level_summary: true
+  poem: false
+  review_status: true
+  collapse_walkthrough: false
+  auto_review:
+    enabled: true
+    drafts: false
+    ignore_title_keywords:
+      - "WIP"
+      - "DO NOT MERGE"
+
+  path_instructions:
+    - path: "src/features/**/*"
+      instructions: >-
+        Feature-based + Clean Architecture軽量版のコードです。
+        components/はUI、hooks/はロジック、services/は外部サービス連携、
+        types/は型定義です。責務分離が適切か確認してください。
+    - path: "src/**/*.ts"
+      instructions: >-
+        すべてのコードに「目的」と「根拠」のコメントが必要です。
+        関数・コンポーネントの冒頭にはJSDocで概要を記述する規約です。
+    - path: "src/**/*.tsx"
+      instructions: >-
+        React Nativeコンポーネントです。横画面専用アプリで
+        NativeWindを使用しています。JSDocコメント必須です。
+    - path: "src/features/voice/**/*"
+      instructions: >-
+        音声認識機能です。K.I.T.T.スタイルの状態マシン
+        (IDLE→LISTENING)パターンに従っているか確認してください。
+    - path: "**/__tests__/**"
+      instructions: >-
+        TDDで書かれたテストです。Jestを使用。
+        テスト名が日本語で分かりやすいか確認してください。
+
+  path_filters:
+    - "!**/*.lock"
+    - "!**/bun.lockb"
+    - "!**/*.png"
+    - "!**/*.jpg"
+    - "!**/*.gif"
+    - "!docs/learning/**"
+
+chat:
+  auto_reply: true

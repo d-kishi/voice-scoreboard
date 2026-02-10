@@ -64,3 +64,6 @@ temp/
 logs/
 *.log
 .claude/settings.local.json
+
+# cc-sdd backups
+*.backup
