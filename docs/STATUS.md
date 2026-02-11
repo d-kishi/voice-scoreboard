@@ -2,24 +2,23 @@
 
 ## 現在の状況
 
-| 項目 | 状態 |
-|------|------|
-| 要件定義 | ✅ 完了（README.md） |
-| Gitリポジトリ | ✅ 作成済み（GitHub Public） |
-| CLAUDE.md | ✅ 作成済み |
-| 環境構築 | ✅ 完了（Windows + WSL + Android Studio） |
-| DevContainer | ✅ 完了 |
-| cc-sdd | ✅ 完了（--claude、11コマンド） |
-| CodeRabbit | ✅ 完了（GitHub App + CLI + Claude Code プラグイン） |
-| Figma Make | ⏳ 未着手 |
-| 設計書 | ⏳ 未着手 |
-| Expoプロジェクト | ⏳ 未着手 |
+| 項目             | 状態                                                 |
+| ---------------- | ---------------------------------------------------- |
+| 要件定義         | ✅ 完了（README.md）                                 |
+| Gitリポジトリ    | ✅ 作成済み（GitHub Public）                         |
+| CLAUDE.md        | ✅ 作成済み                                          |
+| 環境構築         | ✅ 完了（Windows + WSL + Android Studio）            |
+| DevContainer     | ✅ 完了                                              |
+| cc-sdd           | ✅ 完了（--claude、11コマンド）                      |
+| CodeRabbit       | ✅ 完了（GitHub App + CLI + Claude Code プラグイン） |
+| Figma Make       | ✅ 完了（無料アカウント・Make利用可能）               |
+| 設計書           | ⏳ 未着手                                            |
+| Expoプロジェクト | ⏳ 未着手                                            |
 
 ## 次回のタスク
 
-1. **Figma Makeセットアップ** - 画面レイアウト設計
-2. **設計書作成** - SDDで仕様→要件→技術設計→タスク分解
-3. **Expoプロジェクト初期化** - 設計に基づき実装開始
+1. **設計書作成** - SDDで仕様→要件→技術設計→タスク分解
+2. **Expoプロジェクト初期化** - 設計に基づき実装開始
 
 ## 完了済みタスク
 
@@ -35,6 +34,7 @@
 - [x] CodeRabbit導入（.coderabbit.yaml作成、GitHub Appは要インストール）
 - [x] CodeRabbit CLI導入（v0.3.5、WSL環境で認証・レビュー動作確認済み）
 - [x] CodeRabbit Claude Codeプラグイン導入（coderabbit:review）
+- [x] Figma Makeセットアップ（無料アカウント・利用ガイド作成済み）
 
 ## メモ
 
@@ -45,4 +45,4 @@
 
 ---
 
-*最終更新: 2026-02-11*
+_最終更新: 2026-02-12_
