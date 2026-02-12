@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 進捗状況
 
-**セッション開始時に必ず @docs/STATUS.md を確認すること。**
+**セッション開始時に必ず @.kiro/specs/voice-scoreboard/tasks.md を確認すること。**
 
 ## プロジェクト概要
 
