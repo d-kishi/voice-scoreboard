@@ -35,7 +35,7 @@ android/
 .env.production.local
 
 # IDE
-.idea/
+.idea
 .vscode/*
 !.vscode/extensions.json
 !.vscode/settings.json
@@ -67,3 +67,22 @@ logs/
 
 # cc-sdd backups
 *.backup
+
+# Empty directory placeholders
+.gitkeep
+
+# Claude Code Sandbox artifacts (0-byte placeholders)
+.bash_profile
+.bashrc
+.profile
+.zprofile
+.zshrc
+.gitconfig
+.gitmodules
+.mcp.json
+.ripgreprc
+HEAD
+config
+hooks
+objects
+refs

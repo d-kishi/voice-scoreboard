@@ -1,7 +1,7 @@
 # Implementation Plan
 
 - [ ] 1. プロジェクト初期化とスタイリング基盤
-- [ ] 1.1 Expoプロジェクトの作成と基本設定
+- [x] 1.1 Expoプロジェクトの作成と基本設定
   - Expo SDK 52 + TypeScript テンプレートで新規プロジェクト作成
   - 横画面（ランドスケープ）専用に画面方向を固定
   - ESLint / Prettier の設定

@@ -28,10 +28,10 @@ bun install
 bun start
 
 # テスト実行
-bun test
+bun run test
 
 # 単一テスト実行
-bun test --testPathPattern="ファイル名"
+bun run test --testPathPattern="ファイル名"
 
 # リント
 bun run lint
@@ -82,11 +82,31 @@ IDLE（待機）──「スコア」検出──→ 「Ready」応答 ──→
 
 **SDD（cc-sdd）+ TDD**
 
+### 仕様策定フェーズ
+
 1. `/kiro:spec-init` → 仕様作成
 2. `/kiro:spec-requirements` → 要件定義
 3. `/kiro:spec-design` → 技術設計
 4. `/kiro:spec-tasks` → タスク分解
-5. `/kiro:spec-impl` → TDD実装（Red→Green→Refactor）
+
+### 実装フェーズ（必須ルール）
+
+**タスク実装時は必ず `/dev-cycle` スキルを Opus モデルで使用すること。**
+
+```
+/dev-cycle <spec-name> <task-id>
+```
+
+以下の3ステップを順序通りに実行し、スキップしてはならない:
+
+1. **Plan モード**: 実装計画を立て、ユーザーの承認を得る
+2. **`/kiro:spec-impl`**: TDD 実装（Red → Green → Refactor）
+3. **実行記録作成**: `docs/02_TaskLog/` にタスクログを作成
+
+**禁止事項**:
+- `/kiro:spec-impl` をスキップして直接コードを書くこと
+- Plan 承認前に実装に着手すること
+- 実行記録の作成を省略すること
 
 ## コーディング規約
 

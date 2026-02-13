@@ -1,0 +1,35 @@
+{
+  "expo": {
+    "name": "Voice Scoreboard",
+    "slug": "voice-scoreboard",
+    "version": "1.0.0",
+    "orientation": "landscape",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#0f172a",
+    "icon": "./assets/icon.png",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0f172a"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.voicescoreboard.app",
+      "infoPlist": {
+        "NSMicrophoneUsageDescription": "音声コマンドでスコアを操作するためにマイクを使用します"
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#0f172a"
+      },
+      "package": "com.voicescoreboard.app",
+      "permissions": ["RECORD_AUDIO"]
+    },
+    "plugins": [
+      "expo-screen-orientation"
+    ],
+    "newArchEnabled": true
+  }
+}
