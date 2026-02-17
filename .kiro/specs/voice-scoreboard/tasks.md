@@ -1,6 +1,6 @@
 # Implementation Plan
 
-- [ ] 1. プロジェクト初期化とスタイリング基盤
+- [x] 1. プロジェクト初期化とスタイリング基盤
 - [x] 1.1 Expoプロジェクトの作成と基本設定
   - Expo SDK 52 + TypeScript テンプレートで新規プロジェクト作成
   - 横画面（ランドスケープ）専用に画面方向を固定
@@ -8,7 +8,7 @@
   - Jest + React Native Testing Library のテスト環境構築
   - _Requirements: 1.1, 9.5_
 
-- [ ] 1.2 NativeWind（Tailwind CSS）の導入とデザイントークン定義
+- [x] 1.2 NativeWind（Tailwind CSS）の導入とデザイントークン定義
   - NativeWind v4 のインストールと metro.config.js / babel.config.js / global.css の作成
   - tailwind.config.js でビジュアルデザイン仕様のカラーパレットをテーマカラーとして定義（背景: ダークネイビー、スコア数字: 白+グロー、アクセント: シアン/ゴールド、ボタン: ダークグレー、危険: 赤、下部バー: ダークネイビー明るめ）
   - ダークモード背景をデフォルトに設定

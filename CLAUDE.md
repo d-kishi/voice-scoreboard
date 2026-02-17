@@ -18,6 +18,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 > **注意**: bunをメインで使用しますが、Node.js LTSも必要です。
 > Expoの一部コマンド（`expo prebuild`、`eas build`など）が内部で`npm pack`を呼び出すため。
 
+**ネイティブパッケージの追加時は `bun add` ではなく `bunx expo install <pkg>` を使うこと。**
+`bun add` は npm レジストリの最新版を取得するため、Expo SDK の動作保証バージョンと一致しない場合がある。
+
 ## コマンド
 
 ```bash
