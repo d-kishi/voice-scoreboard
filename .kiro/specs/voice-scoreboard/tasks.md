@@ -25,7 +25,7 @@
   - _Requirements: 3.1, 3.2_
   - _Contracts: GameRules Service_
 
-- [ ] 2.2 (P) スコア状態管理ストアの実装
+- [x] 2.2 (P) スコア状態管理ストアの実装
   - zustand でスコア状態（左右の得点、試合終了フラグ）を管理するストアを作成
   - zundo（temporal middleware）でundo機能を組み込み、操作履歴を自動管理
   - 得点の加算・減算・リセット操作を提供
