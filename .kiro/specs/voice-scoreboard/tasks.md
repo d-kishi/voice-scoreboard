@@ -34,7 +34,7 @@
   - _Requirements: 2.1, 2.2, 2.3, 2.5, 3.4, 3.5, 3.6_
   - _Contracts: ScoreStore State_
 
-- [ ] 2.3 スコア操作hookの実装
+- [x] 2.3 スコア操作hookの実装
   - UIとストアの仲介hook。得点操作時に試合ルール判定を呼び出し、試合終了を自動判定
   - ロールバック（zundo の undo）とリセットの操作を提供
   - undo可能かどうか（canUndo）の状態を公開

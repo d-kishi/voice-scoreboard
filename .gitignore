@@ -72,17 +72,17 @@ logs/
 .gitkeep
 
 # Claude Code Sandbox artifacts (0-byte placeholders)
-.bash_profile
-.bashrc
-.profile
-.zprofile
-.zshrc
-.gitconfig
-.gitmodules
-.mcp.json
-.ripgreprc
-HEAD
-config
-hooks
-objects
-refs
+/.bash_profile
+/.bashrc
+/.profile
+/.zprofile
+/.zshrc
+/.gitconfig
+/.gitmodules
+/.mcp.json
+/.ripgreprc
+/HEAD
+/config
+/hooks
+/objects
+/refs
