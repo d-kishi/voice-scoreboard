@@ -140,6 +140,60 @@ const handleSpeechResult = (result: string) => {
 
 **UI 確認時は `/emulator-preview` スキルを使用する。** WSL2 + Android エミュレータのビルド・起動手順が定義されている。
 
+## テスト環境のナレッジ
+
+### ネイティブモジュールのモック
+
+`@expo/vector-icons` など `expo-font` に依存するモジュールは、Jest 環境で `loadedNativeFonts.forEach is not a function` エラーを起こす。`__mocks__/` ディレクトリに手動モックを配置して解決する。
+
+```
+__mocks__/@expo/vector-icons.js   ← 作成済み（Feather, Ionicons）
+```
+
+新しいアイコンセット（MaterialIcons 等）を使う場合は、このモックファイルに export を追加すること。
+
+### jest.setup.ts でのモック制限
+
+`jest.setup.ts` は `.ts` 拡張子のため JSX が使えない。さらに NativeWind（react-native-css-interop）が挿入する `_ReactNativeCSSInterop` 変数により、`jest.mock()` ファクトリ内での `require()` 呼び出しがスコープ制限に抵触する。
+
+**対処法**: `jest.setup.ts` 内の `jest.mock()` ではなく、`__mocks__/` ディレクトリ方式を使う。
+
+## Android ビルド環境の注意事項（WSL2）
+
+### `bun install` 後に必要な手動パッチ
+
+`react-native-worklets@0.7.4` は RN 0.76 をサポート対象外としているため、`bun install` や `rm -rf node_modules` の後に compatibility.json を手動パッチする必要がある:
+
+```bash
+# node_modules/react-native-worklets/compatibility.json の "0.7.x".react-native 配列に "0.76" を追加
+node -e "
+const fs = require('fs');
+const p = 'node_modules/react-native-worklets/compatibility.json';
+const j = JSON.parse(fs.readFileSync(p));
+if (!j['0.7.x']['react-native'].includes('0.76')) {
+  j['0.7.x']['react-native'].unshift('0.76');
+  fs.writeFileSync(p, JSON.stringify(j, null, 2));
+  console.log('Patched');
+} else { console.log('Already patched'); }
+"
+```
+
+### `expo prebuild --clean` 後に必要な復元
+
+`expo prebuild --clean` は `android/` を再生成するため、以下のカスタマイズが消える:
+
+1. **`android/app/build.gradle`**: `packagingOptions` に `pickFirsts += ['**/libworklets.so']` を再追加
+   - react-native-reanimated と react-native-worklets の両方が `libworklets.so` を生成するため重複解消が必要
+2. **`android/local.properties`**: `sdk.dir=/mnt/c/Users/ka837/AppData/Local/Android/Sdk` を再作成
+
+### release ビルドコマンド
+
+```bash
+CMAKE_VERSION=3.28.3 bunx expo run:android --variant release
+```
+
+`CMAKE_VERSION` 環境変数は、ネイティブ Linux cmake（3.28.3）と build.gradle が期待するバージョン（3.22.1）の不一致を解消するために必要。
+
 ## 制約事項
 
 - **Expo Goは使用不可**: 音声認識（@react-native-voice/voice）にネイティブモジュールが必要
