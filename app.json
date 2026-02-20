@@ -28,6 +28,7 @@
       "permissions": ["RECORD_AUDIO"]
     },
     "plugins": [
+      "expo-dev-client",
       "expo-screen-orientation"
     ],
     "newArchEnabled": true

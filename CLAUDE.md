@@ -136,6 +136,10 @@ const handleSpeechResult = (result: string) => {
 
 - **Agent Teams**: 有効（ユーザ設定 `~/.claude/settings.json` で `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` を設定済み）
 
+## エミュレータプレビュー
+
+**UI 確認時は `/emulator-preview` スキルを使用する。** WSL2 + Android エミュレータのビルド・起動手順が定義されている。
+
 ## 制約事項
 
 - **Expo Goは使用不可**: 音声認識（@react-native-voice/voice）にネイティブモジュールが必要
