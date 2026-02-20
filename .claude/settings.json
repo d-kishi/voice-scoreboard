@@ -1,0 +1,31 @@
+{
+  "env": {
+    "CLAUDE_CODE_TASK_LIST_ID": "voice-scorecard"
+  },
+  "permissions": {
+    "allow": [
+      "Bash(git *)",
+      "Bash(bun:*)",
+      "Bash(bunx expo install:*)",
+      "Bash(bunx expo run:android:*)",
+      "Bash(bunx expo prebuild:*)",
+      "Bash(bunx expo export:*)",
+      "Bash(bunx expo export:embed:*)",
+      "Bash(node:*)",
+      "Bash(java:*)",
+      "Bash(npm view:*)",
+      "Bash(npm --version)",
+      "WebSearch",
+      "WebFetch(domain:docs.expo.dev)",
+      "WebFetch(domain:www.nativewind.dev)",
+      "WebFetch(domain:www.npmjs.com)",
+      "WebFetch(domain:api.expo.dev)",
+      "Skill(kiro:spec-impl)",
+      "Skill(kiro:steering-custom)"
+    ]
+  },
+  "sandbox": {
+    "enabled": true,
+    "autoAllowBashIfSandboxed": true
+  }
+}
