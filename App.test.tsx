@@ -1,4 +1,5 @@
 import { render, screen, fireEvent, act } from '@testing-library/react-native';
+import { useKeepAwake } from 'expo-keep-awake';
 import React from 'react';
 import { useScoreStore } from './src/stores/score-store';
 
@@ -12,6 +13,13 @@ describe('App', () => {
   beforeEach(() => {
     useScoreStore.setState({ leftScore: 0, rightScore: 0, isGameEnd: false });
     useScoreStore.temporal.getState().clear();
+  });
+
+  describe('画面スリープ防止', () => {
+    it('App マウント時に useKeepAwake が呼ばれる', () => {
+      render(<App />);
+      expect(useKeepAwake).toHaveBeenCalled();
+    });
   });
 
   it('ScorePanel がレンダリングされる', () => {

@@ -1,6 +1,7 @@
 import { Feather, Ionicons } from '@expo/vector-icons';
 import React, { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
+import { useSettings } from '../../settings/hooks/use-settings';
 import { useScore } from '../hooks/use-score';
 import { ResetDialog } from './ResetDialog';
 
@@ -9,19 +10,18 @@ import { ResetDialog } from './ResetDialog';
  * 【根拠】design.md の ControlBar Contract に準拠。
  *        左側に「音声入力」「読み上げ」トグルボタン、
  *        右側に「ロールバック」「リセット」ボタンを配置する。
- *        トグルボタンは Task 4.1（SettingsStore）未実装のため、
- *        ローカル state でプレースホルダー動作を実現する。
- *        なぜ useSettings を使わないか: Task 4.1 で実装予定のため、
- *        現時点ではローカル state で仮実装し、後で差し替える。
+ *        トグルボタンの状態は useSettings hook（SettingsStore）から取得し、
+ *        AsyncStorage に永続化される。
  */
 export function ControlBar() {
   const { canUndo, rollback, reset } = useScore();
+  const {
+    isVoiceRecognitionEnabled,
+    isSpeechEnabled,
+    toggleVoiceRecognition,
+    toggleSpeech,
+  } = useSettings();
   const [isResetDialogVisible, setIsResetDialogVisible] = useState(false);
-
-  // 【目的】音声機能のトグル状態（プレースホルダー）
-  // 【根拠】Task 4.1 で useSettings hook に置き換え予定
-  const [isVoiceEnabled, setIsVoiceEnabled] = useState(true);
-  const [isSpeechEnabled, setIsSpeechEnabled] = useState(true);
 
   const handleResetPress = () => {
     setIsResetDialogVisible(true);
@@ -44,15 +44,15 @@ export function ControlBar() {
           testID="toggle-voice"
           icon={<Feather name="mic" size={16} color="white" />}
           label="音声入力"
-          isActive={isVoiceEnabled}
-          onPress={() => setIsVoiceEnabled((prev) => !prev)}
+          isActive={isVoiceRecognitionEnabled}
+          onPress={toggleVoiceRecognition}
         />
         <ToggleButton
           testID="toggle-speech"
           icon={<Ionicons name="volume-high-outline" size={16} color="white" />}
           label="読み上げ"
           isActive={isSpeechEnabled}
-          onPress={() => setIsSpeechEnabled((prev) => !prev)}
+          onPress={toggleSpeech}
         />
       </View>
 

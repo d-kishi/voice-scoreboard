@@ -1,6 +1,7 @@
 import { render, screen, fireEvent, act } from '@testing-library/react-native';
 import React from 'react';
 import { useScoreStore } from '../../../../stores/score-store';
+import { useSettingsStore } from '../../../../stores/settings-store';
 import { ControlBar } from '../ControlBar';
 
 /**
@@ -16,6 +17,13 @@ describe('ControlBar', () => {
   beforeEach(() => {
     useScoreStore.setState({ leftScore: 0, rightScore: 0, isGameEnd: false });
     useScoreStore.temporal.getState().clear();
+    // 【目的】SettingsStore を初期状態にリセットする
+    // 【根拠】Task 4.1 で ControlBar がローカル state から useSettings hook に
+    //        移行したため、テスト間で設定状態がリークしないよう初期化が必要。
+    useSettingsStore.setState({
+      isVoiceRecognitionEnabled: true,
+      isSpeechEnabled: true,
+    });
   });
 
   describe('トグルボタン', () => {

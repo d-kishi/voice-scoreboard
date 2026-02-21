@@ -158,6 +158,10 @@ __mocks__/@expo/vector-icons.js   ← 作成済み（Feather, Ionicons）
 
 **対処法**: `jest.setup.ts` 内の `jest.mock()` ではなく、`__mocks__/` ディレクトリ方式を使う。
 
+### zustand persist のテスト
+
+`await rehydrate()` の Promise 解決は状態更新完了を保証しない。テストでリハイドレーションを待つ場合は `onFinishHydration` コールバックを使うこと。
+
 ## Android ビルド環境の注意事項（WSL2）
 
 ### `bun install` 後に必要な手動パッチ
