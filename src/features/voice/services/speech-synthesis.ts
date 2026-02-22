@@ -7,7 +7,7 @@
  *        Contract: SpeechSynthesisService Service（design.md 参照）
  */
 
-import Speech from 'expo-speech';
+import * as Speech from 'expo-speech';
 
 // =================================================================
 // 定数

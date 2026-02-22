@@ -162,6 +162,21 @@ __mocks__/@expo/vector-icons.js   ← 作成済み（Feather, Ionicons）
 
 `await rehydrate()` の Promise 解決は状態更新完了を保証しない。テストでリハイドレーションを待つ場合は `onFinishHydration` コールバックを使うこと。
 
+### Jest モックとネイティブ実行の乖離
+
+Jest モック環境では検出できず、ネイティブビルドで初めて発覚するバグがある。特に以下に注意：
+
+- **`__esModule: true` + `default` モックの罠**: `__mocks__/` に `__esModule: true` と `default: obj` を設定すると、`import X from 'module'` がテストでは通るが、実際のモジュールに default export がない場合、実行時に `undefined` になる。モック対象モジュールの実際のエクスポート形式（default vs named）を必ず確認すること
+- **`require()` パスの検証不可**: `require('../../assets/...')` のような相対パスの深度はモック環境では検証されない。ネイティブビルド（Metro バンドル）で初めてパス解決エラーになる
+
+### release ビルドのデバッグ手法
+
+release ビルドでは Red Box や `console.log` 出力が表示されない。以下の手法を併用する：
+
+- **ErrorBoundary**: React ツリーのクラッシュを画面上に表示（JS レベルのエラーをキャッチ）
+- **logcat**: ネイティブエラーや `console.warn` の確認。`adb.exe logcat -d | grep ReactNativeJS` でフィルタリング
+- ErrorBoundary で何も表示されずブラックアウトする場合は、ネイティブレベルのクラッシュ（New Architecture の Bridgeless 例外ハンドラが例外を握りつぶす可能性あり）
+
 ## Android ビルド環境の注意事項（WSL2）
 
 ### `bun install` 後に必要な手動パッチ

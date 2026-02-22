@@ -96,11 +96,10 @@ function __setIsSpeaking(value) {
   _isSpeaking = value;
 }
 
-// 【根拠】__esModule: true を設定することで、Babel の ESM 互換変換で
-//        `import Speech from 'expo-speech'` が default プロパティを参照する
+// 【根拠】`import * as Speech from 'expo-speech'` に対応するため、
+//        speak/stop/isSpeakingAsync を named exports として直接公開する
 module.exports = {
-  __esModule: true,
-  default: Speech,
+  ...Speech,
   __triggerOnStart,
   __triggerOnDone,
   __triggerOnStopped,

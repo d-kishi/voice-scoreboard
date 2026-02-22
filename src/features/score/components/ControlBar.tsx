@@ -2,6 +2,10 @@ import { Feather, Ionicons } from '@expo/vector-icons';
 import React, { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { useSettings } from '../../settings/hooks/use-settings';
+// 【目的】M4 検証用: TTS・音声認識のエミュレータ動作確認
+// 【根拠】Task 6〜7 で正式統合予定。テスト完了後に置き換え
+import * as SpeechRecognitionService from '../../voice/services/speech-recognition';
+import * as SpeechSynthesisService from '../../voice/services/speech-synthesis';
 import { useScore } from '../hooks/use-score';
 import { ResetDialog } from './ResetDialog';
 
@@ -22,6 +26,36 @@ export function ControlBar() {
     toggleSpeech,
   } = useSettings();
   const [isResetDialogVisible, setIsResetDialogVisible] = useState(false);
+
+  // 【目的】M4 検証用: 「読み上げ」トグル ON 時に TTS テスト発話
+  // 【根拠】Task 6〜7 で正式統合予定
+  const handleToggleSpeech = () => {
+    const willBeEnabled = !isSpeechEnabled;
+    toggleSpeech();
+    if (willBeEnabled) {
+      try {
+        SpeechSynthesisService.speakReady(() => {});
+      } catch (e) {
+        console.warn('[M4] speakReady error:', e);
+      }
+    }
+  };
+
+  // 【目的】M4 検証用: 「音声入力」トグル ON 時にマイク権限リクエスト
+  // 【根拠】Task 6〜7 で正式統合予定
+  const handleToggleVoiceRecognition = () => {
+    const willBeEnabled = !isVoiceRecognitionEnabled;
+    toggleVoiceRecognition();
+    if (willBeEnabled) {
+      try {
+        SpeechRecognitionService.requestPermissions().then((granted) => {
+          console.warn('[M4] Mic permission:', granted ? 'granted' : 'denied');
+        }).catch((e: unknown) => { console.warn('[M4] permission error:', e); });
+      } catch (e) {
+        console.warn('[M4] requestPermissions error:', e);
+      }
+    }
+  };
 
   const handleResetPress = () => {
     setIsResetDialogVisible(true);
@@ -45,14 +79,14 @@ export function ControlBar() {
           icon={<Feather name="mic" size={16} color="white" />}
           label="音声入力"
           isActive={isVoiceRecognitionEnabled}
-          onPress={toggleVoiceRecognition}
+          onPress={handleToggleVoiceRecognition}
         />
         <ToggleButton
           testID="toggle-speech"
           icon={<Ionicons name="volume-high-outline" size={16} color="white" />}
           label="読み上げ"
           isActive={isSpeechEnabled}
-          onPress={toggleSpeech}
+          onPress={handleToggleSpeech}
         />
       </View>
 

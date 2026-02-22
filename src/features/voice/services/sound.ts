@@ -32,7 +32,7 @@ export type SoundType = 'whistle';
  */
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const SOUND_ASSETS: Record<SoundType, number> = {
-  whistle: require('../../../../../assets/sounds/whistle.mp3'),
+  whistle: require('../../../../assets/sounds/whistle.wav'),
 };
 
 // =================================================================
