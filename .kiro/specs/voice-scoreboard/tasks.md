@@ -164,7 +164,7 @@
   - _Contracts: useVoiceStateMachine State_
 
 - [ ] 7. 音声UI統合
-- [ ] 7.1 LISTENING状態のオーバーレイ表示
+- [x] 7.1 LISTENING状態のオーバーレイ表示
   - LISTENING状態に入った時に画面中央にシアンの同心円発光リング（グラデーション）とマイクアイコン（白）を表示
   - リングの下に「Ready」テキスト（シアン）を表示
   - 「Ready」の下に秒数カウントダウン（例: `1s`）を白またはグレーで表示

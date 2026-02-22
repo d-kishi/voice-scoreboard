@@ -152,6 +152,12 @@ __mocks__/@expo/vector-icons.js   ← 作成済み（Feather, Ionicons）
 
 新しいアイコンセット（MaterialIcons 等）を使う場合は、このモックファイルに export を追加すること。
 
+このモックは `props.name` のみを Text として返すため、testID をアイコンに直接付与できない。アイコンの存在をテストで確認するには `<View testID="xxx"><Feather .../></View>` のように View ラッパーで testID を付与すること。
+
+### オーバーレイ UI の確立パターン
+
+GameEndOverlay / ListeningOverlay で確立された「`absoluteFill` + ディム（`bg-black/60`）+ 中央配置」パターンを、オーバーレイ系 UI の標準とする。なぜ Modal ではなく absolute positioning を使うか: Modal は全画面を覆い ControlBar（下部バー）もディム対象になるが、仕様では下部バーはそのまま表示するためスコアエリアのみを覆う必要がある。expo-blur は未インストールのため、ディム効果のみで統一する。
+
 ### jest.setup.ts でのモック制限
 
 `jest.setup.ts` は `.ts` 拡張子のため JSX が使えない。さらに NativeWind（react-native-css-interop）が挿入する `_ReactNativeCSSInterop` 変数により、`jest.mock()` ファクトリ内での `require()` 呼び出しがスコープ制限に抵触する。
