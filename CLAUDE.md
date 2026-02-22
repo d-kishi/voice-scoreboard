@@ -162,6 +162,14 @@ __mocks__/@expo/vector-icons.js   ← 作成済み（Feather, Ionicons）
 
 `await rehydrate()` の Promise 解決は状態更新完了を保証しない。テストでリハイドレーションを待つ場合は `onFinishHydration` コールバックを使うこと。
 
+### 複雑な状態マシンのテストパターン
+
+useReducer + useEffect の分離パターンが有効。reducer を純粋関数として分離すると、状態遷移ロジックを renderHook なしの直接関数呼び出しでテストでき、高速かつ信頼性が高い。副作用（サービス呼び出し等）は useEffect に分離し、hook の統合テストで検証する。
+
+### タイマーを含む hook のテスト
+
+`jest.useFakeTimers()` + `renderHook` + `act` の組み合わせでカウントダウン等のタイマーテストが正確に書ける。`jest.advanceTimersByTime(1000)` を `act()` でラップすることで、タイマー発火後の状態更新を確実に反映させる。`afterEach` で `jest.useRealTimers()` を忘れずに呼ぶこと。
+
 ### Jest モックとネイティブ実行の乖離
 
 Jest モック環境では検出できず、ネイティブビルドで初めて発覚するバグがある。特に以下に注意：
