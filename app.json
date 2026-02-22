@@ -25,11 +25,20 @@
         "backgroundColor": "#0f172a"
       },
       "package": "com.voicescoreboard.app",
-      "permissions": ["RECORD_AUDIO"]
+      "permissions": [
+        "RECORD_AUDIO"
+      ]
     },
     "plugins": [
       "expo-dev-client",
-      "expo-screen-orientation"
+      "expo-screen-orientation",
+      [
+        "expo-speech-recognition",
+        {
+          "microphonePermission": "音声コマンドでスコアを操作するためにマイクを使用します",
+          "speechRecognitionPermission": "音声コマンドを認識するために音声認識を使用します"
+        }
+      ]
     ],
     "newArchEnabled": true
   }

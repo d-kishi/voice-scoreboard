@@ -76,10 +76,12 @@ spec-impl が以下を自律的に実行する:
 
 ### Step 3: 実行記録の作成
 
-spec-impl 完了後、タスクログを作成する:
+spec-impl 完了後、**必ず**テンプレートを読み込んでタスクログを作成する:
 
-1. `references/task-log-template.md` のテンプレートを読み込む
-2. `docs/02_TaskLog/<task-id>-<slug>.md` にタスクログを作成する
+1. **テンプレートを読み込む**: `.claude/skills/dev-cycle/references/task-log-template.md` を Read ツールで開く
+   - **テンプレートの読み込みは必須。** 読み込まずに独自フォーマットで記録を書いてはならない
+   - 既に `docs/02_TaskLog/` に同名ファイルが存在する場合でも、テンプレートを読み込んで上書き再作成する
+2. テンプレートの構造と粒度指針に従い `docs/02_TaskLog/<task-id>-<slug>.md` にタスクログを作成する
 3. Step 1 の予測と spec-impl の実際の結果を比較して記録する
 4. `.kiro/specs/<spec-name>/tasks.md` の対象タスクが `[x]` になっていることを確認する
    （spec-impl が更新済みのはずだが、漏れがあれば更新する）
@@ -93,4 +95,4 @@ spec-impl 完了後、タスクログを作成する:
 
 ## References
 
-- `references/task-log-template.md` - タスクログのテンプレート
+- `.claude/skills/dev-cycle/references/task-log-template.md` - タスクログのテンプレート（**プロジェクトルートからの絶対パス**）
