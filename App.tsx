@@ -10,6 +10,8 @@ import { GameEndOverlay } from '@/features/score/components/GameEndOverlay';
 import { ScorePanel } from '@/features/score/components/ScorePanel';
 import { useGameEndWhistle } from '@/features/score/hooks/use-game-end-whistle';
 import { useScore } from '@/features/score/hooks/use-score';
+import { ListeningOverlay } from '@/features/voice/components/ListeningOverlay';
+import { useVoiceStateMachine } from '@/features/voice/hooks/use-voice-state-machine';
 
 // 【目的】M4 デバッグ用: Release ビルドでクラッシュ原因を表示する ErrorBoundary
 // 【根拠】Release ビルドでは Red Box が無いため、エラー原因が不明になる
@@ -45,8 +47,10 @@ class ErrorBoundary extends React.Component<
  * 【目的】アプリケーションのルートコンポーネント（ScoreScreen 相当）
  * 【根拠】横画面スコアボードのメインエントリ。
  *        useKeepAwake で画面スリープを防止し、試合中に画面が消えることを防ぐ。
- *        スコアエリアコンテナ（flex-1）内に ScorePanel と GameEndOverlay を配置し、
+ *        スコアエリアコンテナ（flex-1）内に ScorePanel・GameEndOverlay・ListeningOverlay を配置し、
  *        ControlBar は外に置くことで、オーバーレイのディム効果が下部バーに及ばないようにする。
+ *        useVoiceStateMachine は自己管理型で、isVoiceRecognitionEnabled が ON なら
+ *        マウント時に自動でウェイクワード認識を開始する。start()/stop() の明示的呼び出しは不要。
  */
 export default function App() {
   useKeepAwake();
@@ -57,15 +61,25 @@ export default function App() {
   //        hook 内でプリロード（マウント時）と再生トリガーの両方を管理する。
   useGameEndWhistle(isGameEnd);
 
+  // 【目的】K.I.T.T.スタイル音声状態マシンを起動し、UI に状態を公開する
+  // 【根拠】useVoiceStateMachine は内部で useSettings を購読し、
+  //        isVoiceRecognitionEnabled の ON/OFF に自動で反応する。
+  //        state は ListeningOverlay の表示制御に使用する。
+  const { state: voiceState, countdown } = useVoiceStateMachine();
+
   return (
     <ErrorBoundary>
       <View className="flex-1 bg-background">
-        {/* 【目的】スコアエリアコンテナ: ScorePanel + GameEndOverlay をグループ化 */}
-        {/* 【根拠】GameEndOverlay の absolute positioning がこのコンテナ内に限定され、
+        {/* 【目的】スコアエリアコンテナ: ScorePanel + オーバーレイ群をグループ化 */}
+        {/* 【根拠】GameEndOverlay・ListeningOverlay の absolute positioning がこのコンテナ内に限定され、
                    ControlBar はディム対象外となる */}
         <View className="flex-1">
           <ScorePanel isGameEnd={isGameEnd} />
           {isGameEnd && <GameEndOverlay onReset={reset} />}
+          <ListeningOverlay
+            visible={voiceState === 'LISTENING'}
+            countdown={countdown}
+          />
         </View>
         <ControlBar />
         <StatusBar style="light" />

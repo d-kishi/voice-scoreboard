@@ -1,11 +1,8 @@
 import { Feather, Ionicons } from '@expo/vector-icons';
 import React, { useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Alert, Linking, Pressable, Text, View } from 'react-native';
 import { useSettings } from '../../settings/hooks/use-settings';
-// 【目的】M4 検証用: TTS・音声認識のエミュレータ動作確認
-// 【根拠】Task 6〜7 で正式統合予定。テスト完了後に置き換え
-import * as SpeechRecognitionService from '../../voice/services/speech-recognition';
-import * as SpeechSynthesisService from '../../voice/services/speech-synthesis';
+import { requestPermissions } from '../../voice/services/speech-recognition';
 import { useScore } from '../hooks/use-score';
 import { ResetDialog } from './ResetDialog';
 
@@ -26,35 +23,39 @@ export function ControlBar() {
     toggleSpeech,
   } = useSettings();
   const [isResetDialogVisible, setIsResetDialogVisible] = useState(false);
+  // 【目的】権限リクエスト中の連打を防止する
+  // 【根拠】requestPermissions は async のため、ダイアログ表示中の二重タップを防ぐ
+  const [isRequesting, setIsRequesting] = useState(false);
 
-  // 【目的】M4 検証用: 「読み上げ」トグル ON 時に TTS テスト発話
-  // 【根拠】Task 6〜7 で正式統合予定
-  const handleToggleSpeech = () => {
-    const willBeEnabled = !isSpeechEnabled;
-    toggleSpeech();
-    if (willBeEnabled) {
-      try {
-        SpeechSynthesisService.speakReady(() => {});
-      } catch (e) {
-        console.warn('[M4] speakReady error:', e);
-      }
-    }
-  };
-
-  // 【目的】M4 検証用: 「音声入力」トグル ON 時にマイク権限リクエスト
-  // 【根拠】Task 6〜7 で正式統合予定
-  const handleToggleVoiceRecognition = () => {
+  // 【目的】音声入力トグルの ON 時にマイク権限をリクエストする
+  // 【根拠】design.md: マイク権限未許可時は音声機能を無効化し UI で通知。
+  //        権限拒否時は Alert で通知し、設定画面への誘導を提供する。
+  //        OFF→ON 時のみ権限チェック。ON→OFF は無条件で切り替え。
+  const handleToggleVoiceRecognition = async () => {
+    if (isRequesting) return;
     const willBeEnabled = !isVoiceRecognitionEnabled;
-    toggleVoiceRecognition();
+
     if (willBeEnabled) {
+      setIsRequesting(true);
       try {
-        SpeechRecognitionService.requestPermissions().then((granted) => {
-          console.warn('[M4] Mic permission:', granted ? 'granted' : 'denied');
-        }).catch((e: unknown) => { console.warn('[M4] permission error:', e); });
-      } catch (e) {
-        console.warn('[M4] requestPermissions error:', e);
+        const granted = await requestPermissions();
+        if (!granted) {
+          Alert.alert(
+            'マイク権限が必要です',
+            '音声入力を使用するにはマイクへのアクセスを許可してください。',
+            [
+              { text: 'キャンセル', style: 'cancel' },
+              { text: '設定を開く', onPress: () => Linking.openSettings() },
+            ],
+          );
+          return;
+        }
+      } finally {
+        setIsRequesting(false);
       }
     }
+
+    toggleVoiceRecognition();
   };
 
   const handleResetPress = () => {
@@ -86,7 +87,7 @@ export function ControlBar() {
           icon={<Ionicons name="volume-high-outline" size={16} color="white" />}
           label="読み上げ"
           isActive={isSpeechEnabled}
-          onPress={handleToggleSpeech}
+          onPress={toggleSpeech}
         />
       </View>
 

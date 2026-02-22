@@ -1,19 +1,32 @@
-import { render, screen, fireEvent, act } from '@testing-library/react-native';
+import { render, screen, fireEvent, act, waitFor } from '@testing-library/react-native';
 import React from 'react';
+import { Alert } from 'react-native';
 import { useScoreStore } from '../../../../stores/score-store';
 import { useSettingsStore } from '../../../../stores/settings-store';
 import { ControlBar } from '../ControlBar';
 
+// 【目的】speech-recognition の requestPermissions をモック化
+// 【根拠】権限リクエストの結果に応じた ControlBar の振る舞いをテストする
+jest.mock('../../../voice/services/speech-recognition', () => ({
+  requestPermissions: jest.fn(),
+}));
+
+// 【目的】Alert.alert をスパイしてダイアログ表示を検証する
+jest.spyOn(Alert, 'alert');
+
 /**
  * 【目的】ControlBar コンポーネントのユニットテスト
- * 【根拠】Task 3.2 の受け入れ条件:
+ * 【根拠】Task 3.2 の受け入れ条件 + Task 7.3 のマイク権限フロー:
  *        - 左側に音声入力・読み上げトグルボタン
  *        - 右側にロールバック・リセットボタン
  *        - undo 不可時はロールバックボタンを無効化
  *        - リセットボタンタップで確認ダイアログ表示
  *        - ダイアログ承認でリセット実行、キャンセルでダイアログ非表示
+ *        - 音声入力 ON 時にマイク権限をリクエストし、拒否時はトグルを ON にしない
  */
 describe('ControlBar', () => {
+  const { requestPermissions } = require('../../../voice/services/speech-recognition');
+
   beforeEach(() => {
     useScoreStore.setState({ leftScore: 0, rightScore: 0, isGameEnd: false });
     useScoreStore.temporal.getState().clear();
@@ -24,6 +37,9 @@ describe('ControlBar', () => {
       isVoiceRecognitionEnabled: true,
       isSpeechEnabled: true,
     });
+    jest.clearAllMocks();
+    // 【目的】デフォルトでは権限が許可される想定
+    requestPermissions.mockResolvedValue(true);
   });
 
   describe('トグルボタン', () => {
@@ -39,19 +55,72 @@ describe('ControlBar', () => {
       expect(screen.getByText('読み上げ')).toBeTruthy();
     });
 
-    it('音声入力トグルのタップで状態が切り替わる', () => {
+    it('音声入力トグルの OFF→ON で権限リクエストが呼ばれる', async () => {
+      // 【目的】OFF 状態からトグル ON 時に requestPermissions が呼ばれることを検証
+      useSettingsStore.setState({ isVoiceRecognitionEnabled: false });
+
       render(<ControlBar />);
-      const toggle = screen.getByTestId('toggle-voice');
-      fireEvent.press(toggle);
-      // 【根拠】トグル ON/OFF の視覚的状態はアクセシビリティ属性で検証する
-      expect(toggle.props.accessibilityState?.selected).toBe(false);
+      await act(async () => {
+        fireEvent.press(screen.getByTestId('toggle-voice'));
+      });
+
+      expect(requestPermissions).toHaveBeenCalled();
     });
 
-    it('読み上げトグルのタップで状態が切り替わる', () => {
+    it('権限が許可された場合、音声入力がONになる', async () => {
+      useSettingsStore.setState({ isVoiceRecognitionEnabled: false });
+      requestPermissions.mockResolvedValue(true);
+
+      render(<ControlBar />);
+      await act(async () => {
+        fireEvent.press(screen.getByTestId('toggle-voice'));
+      });
+
+      expect(useSettingsStore.getState().isVoiceRecognitionEnabled).toBe(true);
+    });
+
+    it('権限が拒否された場合、音声入力がOFFのままでAlertが表示される', async () => {
+      useSettingsStore.setState({ isVoiceRecognitionEnabled: false });
+      requestPermissions.mockResolvedValue(false);
+
+      render(<ControlBar />);
+      await act(async () => {
+        fireEvent.press(screen.getByTestId('toggle-voice'));
+      });
+
+      // 【根拠】権限拒否時はトグルを ON にしない
+      expect(useSettingsStore.getState().isVoiceRecognitionEnabled).toBe(false);
+      // 【根拠】ユーザーに通知する
+      expect(Alert.alert).toHaveBeenCalledWith(
+        'マイク権限が必要です',
+        '音声入力を使用するにはマイクへのアクセスを許可してください。',
+        expect.arrayContaining([
+          expect.objectContaining({ text: 'キャンセル' }),
+          expect.objectContaining({ text: '設定を開く' }),
+        ]),
+      );
+    });
+
+    it('音声入力トグルの ON→OFF では権限リクエストが呼ばれない', async () => {
+      // 【目的】ON → OFF は権限不要
+      useSettingsStore.setState({ isVoiceRecognitionEnabled: true });
+
+      render(<ControlBar />);
+      await act(async () => {
+        fireEvent.press(screen.getByTestId('toggle-voice'));
+      });
+
+      expect(requestPermissions).not.toHaveBeenCalled();
+      expect(useSettingsStore.getState().isVoiceRecognitionEnabled).toBe(false);
+    });
+
+    it('読み上げトグルのタップで状態が切り替わる（権限リクエストなし）', () => {
       render(<ControlBar />);
       const toggle = screen.getByTestId('toggle-speech');
       fireEvent.press(toggle);
       expect(toggle.props.accessibilityState?.selected).toBe(false);
+      // 【根拠】読み上げトグルは権限リクエスト不要
+      expect(requestPermissions).not.toHaveBeenCalled();
     });
   });
 
