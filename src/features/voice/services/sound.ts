@@ -6,7 +6,7 @@
  *        - エラー時の Graceful Degradation（音なしで続行）を統一的に扱える
  *        - テスト時にモック差し替えが容易になる
  *        Contract: SoundService Service（design.md 参照）
- *        Requirements: 6.6 — 試合終了時にホイッスル音を5秒間再生する
+ *        Requirements: 6.6 — 試合終了時にホイッスル音を3秒間再生する
  */
 
 import { Audio } from 'expo-av';
@@ -51,6 +51,13 @@ let soundCache: Record<SoundType, Audio.Sound | null> = {
 /** 【目的】プリロードが実行済みかどうかのフラグ（失敗した場合も true） */
 let isPreloaded = false;
 
+/**
+ * 【目的】ホイッスル音の再生上限時間（ミリ秒）
+ * 【根拠】アセットファイル（whistle.wav）は5秒だが、実地検証で3秒が適切と判断。
+ *        play() の maxDurationMs で指定して打ち切る。
+ */
+export const WHISTLE_DURATION_MS = 3000;
+
 // =================================================================
 // パブリック API
 // =================================================================
@@ -83,9 +90,14 @@ export async function preload(): Promise<void> {
  *        Sound インスタンスが null（ロード失敗）の場合は何もせず即座に解決する。
  *
  * @param type 再生する効果音の種類
+ * @param maxDurationMs 再生上限時間（ミリ秒）。指定すると、この時間で再生を打ち切る。
+ *        アセットファイルの長さに関わらず、所望の長さで再生を止めるために使用。
  * @returns 再生完了時に解決する Promise
  */
-export async function play(type: SoundType): Promise<void> {
+export async function play(
+  type: SoundType,
+  maxDurationMs?: number
+): Promise<void> {
   // 【目的】プリロード未実行なら自動プリロード
   if (!isPreloaded) {
     await preload();
@@ -96,19 +108,43 @@ export async function play(type: SoundType): Promise<void> {
   // 【目的】Sound が取得できなかった場合は音なしで続行
   if (!sound) return;
 
+  // 【根拠】TypeScript のクロージャ推論で sound が null と推論されるのを防ぐ。
+  //        上の null ガード後なので、ここで non-null が保証されている。
+  const validSound = sound;
+
   return new Promise<void>((resolve) => {
+    let cutoffTimer: ReturnType<typeof setTimeout> | null = null;
+
+    // 【目的】再生を停止してクリーンアップする共通関数
+    function finish(): void {
+      if (cutoffTimer !== null) {
+        clearTimeout(cutoffTimer);
+        cutoffTimer = null;
+      }
+      validSound.setOnPlaybackStatusUpdate(null);
+      validSound.stopAsync().then(() => resolve());
+    }
+
     // 【目的】再生完了を didJustFinish で検知する
     // 【根拠】setOnPlaybackStatusUpdate は再生中に複数回呼ばれるが、
     //        didJustFinish: true は再生が最後まで到達した時に1回だけ発火する
-    sound.setOnPlaybackStatusUpdate((status: { didJustFinish?: boolean }) => {
-      if (status.didJustFinish) {
-        // 【目的】リスナーを解除し、再生位置を先頭に戻す
-        sound.setOnPlaybackStatusUpdate(null);
-        sound.stopAsync().then(() => resolve());
+    validSound.setOnPlaybackStatusUpdate(
+      (status: { didJustFinish?: boolean }) => {
+        if (status.didJustFinish) {
+          finish();
+        }
       }
-    });
+    );
 
-    sound.playAsync();
+    // 【目的】maxDurationMs が指定された場合、タイマーで再生を打ち切る
+    // 【根拠】アセットファイルが長い場合でも、所望の長さで再生を止められる
+    if (maxDurationMs !== undefined) {
+      cutoffTimer = setTimeout(() => {
+        finish();
+      }, maxDurationMs);
+    }
+
+    validSound.playAsync();
   });
 }
 

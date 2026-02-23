@@ -282,7 +282,7 @@ describe('voiceStateReducer', () => {
     const allStates: VoiceReducerState[] = [
       { state: 'IDLE', pendingCommand: null, countdown: 0 },
       { state: 'SPEAKING_READY', pendingCommand: null, countdown: 0 },
-      { state: 'LISTENING', pendingCommand: null, countdown: 3 },
+      { state: 'LISTENING', pendingCommand: null, countdown: LISTENING_DURATION },
       { state: 'SPEAKING_ROGER', pendingCommand: 'right', countdown: 0 },
       { state: 'EXECUTING', pendingCommand: 'left', countdown: 0 },
       { state: 'SPEAKING_SCORE', pendingCommand: null, countdown: 0 },

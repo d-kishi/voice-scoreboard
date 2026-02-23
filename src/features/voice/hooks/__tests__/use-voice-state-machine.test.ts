@@ -8,6 +8,7 @@
 
 import { renderHook, act } from '@testing-library/react-native';
 import { useVoiceStateMachine } from '../use-voice-state-machine';
+import { LISTENING_DURATION } from '../voice-state-reducer';
 import {
   startRecognition,
   abortRecognition,
@@ -230,7 +231,7 @@ describe('useVoiceStateMachine', () => {
       expect(result.current.state).toBe('LISTENING');
     });
 
-    it('LISTENING 遷移時に countdown が 3 になる', () => {
+    it('LISTENING 遷移時に countdown が LISTENING_DURATION になる', () => {
       const { result } = renderHook(() => useVoiceStateMachine());
 
       act(() => {
@@ -240,7 +241,7 @@ describe('useVoiceStateMachine', () => {
         triggerSpeakReadyDone();
       });
 
-      expect(result.current.countdown).toBe(3);
+      expect(result.current.countdown).toBe(LISTENING_DURATION);
     });
 
     it('LISTENING 状態で command モードの認識が開始される', () => {
@@ -436,25 +437,25 @@ describe('useVoiceStateMachine', () => {
     it('カウントダウンが毎秒デクリメントされる', () => {
       const { result } = renderHook(() => useVoiceStateMachine());
       advanceToListening(result);
-      expect(result.current.countdown).toBe(3);
+      expect(result.current.countdown).toBe(LISTENING_DURATION);
 
       act(() => {
         jest.advanceTimersByTime(1000);
       });
-      expect(result.current.countdown).toBe(2);
+      expect(result.current.countdown).toBe(LISTENING_DURATION - 1);
 
       act(() => {
         jest.advanceTimersByTime(1000);
       });
-      expect(result.current.countdown).toBe(1);
+      expect(result.current.countdown).toBe(LISTENING_DURATION - 2);
     });
 
-    it('3 秒経過で IDLE に戻る', () => {
+    it(`${LISTENING_DURATION} 秒経過で IDLE に戻る`, () => {
       const { result } = renderHook(() => useVoiceStateMachine());
       advanceToListening(result);
 
       act(() => {
-        jest.advanceTimersByTime(3000);
+        jest.advanceTimersByTime(LISTENING_DURATION * 1000);
       });
 
       expect(result.current.state).toBe('IDLE');

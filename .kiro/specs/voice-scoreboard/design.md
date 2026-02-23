@@ -173,7 +173,7 @@ stateDiagram-v2
     IDLE --> SPEAKING_READY: ウェイクワード検知
     SPEAKING_READY --> LISTENING: Ready読み上げ完了
     LISTENING --> SPEAKING_ROGER: コマンド検知
-    LISTENING --> IDLE: 3秒タイムアウト
+    LISTENING --> IDLE: 5秒タイムアウト
     SPEAKING_ROGER --> EXECUTING: Roger読み上げ完了
     EXECUTING --> SPEAKING_SCORE: ロールバック or リセット実行
     EXECUTING --> IDLE: 得点加算実行
@@ -229,8 +229,8 @@ sequenceDiagram
 | 4.1 | 常時リスニング IDLE状態 | useVoiceStateMachine, SpeechRecognitionService | VoiceState | 音声コマンド状態マシン |
 | 4.2 | ウェイクワード検知 Ready応答 | useVoiceStateMachine, SpeechSynthesisService | VoiceState | 音声コマンド状態マシン |
 | 4.3 | LISTENING状態のUI表示 | ListeningOverlay | VoiceState | - |
-| 4.4 | 3秒カウントダウン表示 | ListeningOverlay | VoiceState | - |
-| 4.5 | 3秒タイムアウトでIDLE復帰 | useVoiceStateMachine | VoiceState | 音声コマンド状態マシン |
+| 4.4 | 5秒カウントダウン表示 | ListeningOverlay | VoiceState | - |
+| 4.5 | 5秒タイムアウトでIDLE復帰 | useVoiceStateMachine | VoiceState | 音声コマンド状態マシン |
 | 5.1-5.4 | 音声コマンドでスコア操作 | useVoiceStateMachine, useScore | VoiceCommand | 音声コマンド状態マシン |
 | 5.5 | コマンド実行後IDLE復帰 | useVoiceStateMachine | VoiceState | 音声コマンド状態マシン |
 | 6.1-6.2 | Ready/Roger読み上げ | SpeechSynthesisService | SpeechSynthesisService | 音声コマンド状態マシン |
@@ -415,7 +415,7 @@ interface SpeechRecognitionService {
 
 **Implementation Notes**
 - wakeword モード: `continuous: false`、`interimResults: true` で開始。`end` イベントで自動再起動
-- command モード: `contextualStrings: ['右', '左', 'ロールバック', 'リセット']` を設定。3秒後に `stop()` を呼び出し
+- command モード: `contextualStrings: ['右', '左', 'ロールバック', 'リセット']` を設定。5秒後に `stop()` を呼び出し
 
 #### SpeechSynthesisService
 
@@ -481,7 +481,7 @@ interface SoundService {
 **Responsibilities & Constraints**
 - IDLE→SPEAKING_READY→LISTENING→SPEAKING_ROGER→EXECUTING→SPEAKING_SCORE→IDLE の状態管理
 - 音声認識と読み上げの排他制御
-- 3秒タイムアウトの管理
+- 5秒タイムアウトの管理
 - ウェイクワード「スコア」とコマンド語彙の判定
 - 設定（音声認識ON/OFF、読み上げON/OFF）の反映
 
@@ -595,7 +595,7 @@ classDiagram
 - **Graceful Degradation**: 音声認識が利用不可の場合はタッチ操作のみで完全に動作
 
 ### Error Categories and Responses
-**User Errors**: マイク権限拒否 → 設定画面への誘導。音声認識できない発話 → 3秒タイムアウトでIDLEに復帰
+**User Errors**: マイク権限拒否 → 設定画面への誘導。音声認識できない発話 → 5秒タイムアウトでIDLEに復帰
 **System Errors**: 音声認識エンジン初期化失敗 → 音声機能を自動的にOFFにし、タッチ操作モードにフォールバック。効果音ファイル読み込み失敗 → エラーログ出力、音なしで続行
 
 ## Testing Strategy

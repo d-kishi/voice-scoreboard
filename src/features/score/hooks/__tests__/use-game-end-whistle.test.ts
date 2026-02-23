@@ -17,6 +17,7 @@ import { useGameEndWhistle } from '../use-game-end-whistle';
 jest.mock('../../../voice/services/sound', () => ({
   preload: jest.fn().mockResolvedValue(undefined),
   play: jest.fn().mockResolvedValue(undefined),
+  WHISTLE_DURATION_MS: 3000,
 }));
 
 describe('useGameEndWhistle', () => {
@@ -62,7 +63,7 @@ describe('useGameEndWhistle', () => {
       rerender({ isGameEnd: true });
 
       expect(SoundService.play).toHaveBeenCalledTimes(1);
-      expect(SoundService.play).toHaveBeenCalledWith('whistle');
+      expect(SoundService.play).toHaveBeenCalledWith('whistle', expect.any(Number));
     });
 
     it('初期値が false の場合、マウント時には再生しない', () => {

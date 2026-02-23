@@ -3,7 +3,7 @@
  * 【根拠】TDD の RED フェーズとして、サービスの期待動作を先にテストで定義する。
  *        プリロード、再生開始/完了、エラーハンドリング（Graceful Degradation）をカバーする。
  *        Contract: SoundService Service（design.md 参照）
- *        Requirements: 6.6 — 試合終了時にホイッスル音を5秒間再生する
+ *        Requirements: 6.6 — 試合終了時にホイッスル音を3秒間再生する
  */
 
 import {
@@ -152,6 +152,59 @@ describe('SoundService', () => {
       await expect(play('whistle')).resolves.toBeUndefined();
 
       consoleSpy.mockRestore();
+    });
+  });
+
+  // =================================================================
+  // play() with maxDurationMs
+  // =================================================================
+  describe('play() with maxDurationMs', () => {
+    beforeEach(() => {
+      jest.useFakeTimers();
+    });
+
+    afterEach(() => {
+      jest.useRealTimers();
+    });
+
+    it('maxDurationMs 経過で再生が打ち切られ stopAsync が呼ばれる', async () => {
+      await preload();
+      const sound = __getMockSoundInstance();
+
+      const playPromise = play('whistle', 3000);
+
+      // 3秒経過で打ち切り
+      jest.advanceTimersByTime(3000);
+      await playPromise;
+
+      expect(sound.stopAsync).toHaveBeenCalledTimes(1);
+      expect(sound.setOnPlaybackStatusUpdate).toHaveBeenCalledWith(null);
+    });
+
+    it('maxDurationMs 前に再生完了した場合はタイマーがキャンセルされる', async () => {
+      await preload();
+      const sound = __getMockSoundInstance();
+
+      const playPromise = play('whistle', 5000);
+
+      // 2秒時点で自然終了
+      jest.advanceTimersByTime(2000);
+      __triggerPlaybackFinished();
+      await playPromise;
+
+      expect(sound.stopAsync).toHaveBeenCalledTimes(1);
+
+      // 残り3秒経過しても stopAsync が追加で呼ばれない
+      jest.advanceTimersByTime(3000);
+      expect(sound.stopAsync).toHaveBeenCalledTimes(1);
+    });
+
+    it('maxDurationMs なしでは従来通り didJustFinish で完了する', async () => {
+      await preload();
+
+      const playPromise = play('whistle');
+      __triggerPlaybackFinished();
+      await expect(playPromise).resolves.toBeUndefined();
     });
   });
 

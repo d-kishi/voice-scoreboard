@@ -64,7 +64,7 @@ export const INITIAL_VOICE_STATE: VoiceReducerState = {
 };
 
 /** 【目的】LISTENING 状態のカウントダウン秒数 */
-export const LISTENING_DURATION = 3;
+export const LISTENING_DURATION = 5;
 
 // =================================================================
 // reducer 本体
@@ -107,7 +107,7 @@ export function voiceStateReducer(
       if (current.state !== 'LISTENING') return current;
       return { ...current, countdown: current.countdown - 1 };
 
-    // LISTENING → IDLE: 3 秒タイムアウト
+    // LISTENING → IDLE: 5 秒タイムアウト
     case 'LISTENING_TIMEOUT':
       if (current.state !== 'LISTENING') return current;
       return { ...INITIAL_VOICE_STATE };

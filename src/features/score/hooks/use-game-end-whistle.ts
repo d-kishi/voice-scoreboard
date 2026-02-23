@@ -10,6 +10,7 @@
 
 import { useEffect, useRef } from 'react';
 import * as SoundService from '../../voice/services/sound';
+import { WHISTLE_DURATION_MS } from '../../voice/services/sound';
 
 /**
  * 【目的】試合終了時にホイッスル音を再生する
@@ -40,7 +41,7 @@ export function useGameEndWhistle(isGameEnd: boolean): void {
       // 【根拠】SoundService.play() は Promise を返すが、
       //        ここでは再生完了を待つ必要がないため await しない。
       //        catch で例外を握り潰し、クラッシュを防ぐ。
-      SoundService.play('whistle').catch(() => {
+      SoundService.play('whistle', WHISTLE_DURATION_MS).catch(() => {
         // Graceful Degradation: 音なしで続行
       });
     }

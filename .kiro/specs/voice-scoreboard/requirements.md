@@ -34,7 +34,7 @@
 #### Acceptance Criteria
 1. When いずれかのチームが25点に到達し、かつ相手チームとの点差が2点以上ある, the Voice Scoreboard shall 試合終了と判定する
 2. While 両チームの得点が24-24以降の状態, the Voice Scoreboard shall 2点差がつくまで試合を継続する（デュース）
-3. When 試合終了が判定された, the Voice Scoreboard shall スコアを固定表示し、ホイッスル音を5秒間再生する
+3. When 試合終了が判定された, the Voice Scoreboard shall スコアを固定表示し、ホイッスル音を3秒間再生する
 4. While 試合終了状態, the Voice Scoreboard shall 得点の加算・減算・ロールバック操作を受け付けない
 5. While 試合終了状態, the Voice Scoreboard shall リセット操作（ボタンまたは音声）のみ受け付ける
 6. When 試合終了状態でリセットが実行された, the Voice Scoreboard shall 0-0の状態に戻し、新しい試合を開始可能にする
@@ -46,8 +46,8 @@
 1. While 音声認識が有効な状態, the Voice Scoreboard shall 常時リスニングを行い、ウェイクワード「スコア」を待機する（IDLE状態）
 2. When IDLE状態でウェイクワード「スコア」が検知された, the Voice Scoreboard shall 「Ready」と音声で応答し、LISTENING状態に遷移する
 3. While LISTENING状態, the Voice Scoreboard shall 画面中央にマイクアイコンと「Ready」テキストを表示し、背景のスコアをディム表示にする
-4. While LISTENING状態, the Voice Scoreboard shall 3秒間のカウントダウンを表示する
-5. When LISTENING状態で3秒間コマンドが検知されなかった, the Voice Scoreboard shall IDLE状態に自動的に戻る
+4. While LISTENING状態, the Voice Scoreboard shall 5秒間のカウントダウンを表示する
+5. When LISTENING状態で5秒間コマンドが検知されなかった, the Voice Scoreboard shall IDLE状態に自動的に戻る
 
 ### Requirement 5: 音声コマンド操作
 **Objective:** 練習参加者として、音声コマンドでスコアを操作したい。試合中にスマートフォンに触れずに得点管理するため。
@@ -68,7 +68,7 @@
 3. When ロールバックまたはリセットが音声コマンドで実行された, the Voice Scoreboard shall 「左{点数} 右{点数}」の形式で現在のスコアを読み上げる
 4. When 得点加算が音声コマンドで実行された, the Voice Scoreboard shall スコアの読み上げは行わず「Roger」のみ応答する
 5. When タッチ操作で得点が変更された, the Voice Scoreboard shall 音声読み上げは行わない
-6. When 試合終了が判定された, the Voice Scoreboard shall ホイッスル音を5秒間再生する
+6. When 試合終了が判定された, the Voice Scoreboard shall ホイッスル音を3秒間再生する
 
 ### Requirement 7: 画面スリープ防止・常時点灯
 **Objective:** 練習参加者として、アプリ使用中は画面が消えないでほしい。試合中に画面が暗くなって見えなくなることを防ぐため。
