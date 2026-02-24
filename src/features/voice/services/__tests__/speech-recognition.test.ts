@@ -40,7 +40,7 @@ describe('SpeechRecognitionService', () => {
       ...overrides,
     });
 
-    it('wakeword モードで start() を呼ぶと ExpoSpeechRecognitionModule.start() が呼ばれる', () => {
+    it('wakeword モードで start() を呼ぶと continuous: true で開始される', () => {
       const options = createWakewordOptions();
       startRecognition(options);
 
@@ -48,7 +48,7 @@ describe('SpeechRecognitionService', () => {
         expect.objectContaining({
           lang: 'ja-JP',
           interimResults: true,
-          continuous: false,
+          continuous: true,
         })
       );
     });
@@ -88,27 +88,19 @@ describe('SpeechRecognitionService', () => {
       expect(onResult).toHaveBeenCalledWith('すこ', false);
     });
 
-    it('end イベントで自動再起動する（再起動ループ）', () => {
-      const options = createWakewordOptions();
-      startRecognition(options);
-
-      // 【根拠】wakeword モードでは end イベント時に自動的に再認識を開始する
-      expect(ExpoSpeechRecognitionModule.start).toHaveBeenCalledTimes(1);
-      __emitEvent('end', {});
-      expect(ExpoSpeechRecognitionModule.start).toHaveBeenCalledTimes(2);
-    });
-
-    it('end イベントでの再起動時に onEnd は呼ばれない', () => {
+    it('end イベントで onEnd が通知される（continuous モードのため再起動しない）', () => {
       const onEnd = jest.fn();
       const options = createWakewordOptions({ onEnd });
       startRecognition(options);
 
-      // 【根拠】wakeword モードの再起動ループ中は上位層に不要な onEnd を通知しない
+      // 【根拠】continuous: true ではセッションが維持されるため、end は stop/abort/エラー時のみ発火。
+      //        再起動ループは不要で、onEnd を通知して上位層（状態マシン）に委ねる。
       __emitEvent('end', {});
-      expect(onEnd).not.toHaveBeenCalled();
+      expect(ExpoSpeechRecognitionModule.start).toHaveBeenCalledTimes(1);
+      expect(onEnd).toHaveBeenCalledTimes(1);
     });
 
-    it('stop() 後の end イベントでは再起動しない', () => {
+    it('stop() 後の end イベントで onEnd が通知される', () => {
       const onEnd = jest.fn();
       const options = createWakewordOptions({ onEnd });
       startRecognition(options);
@@ -116,7 +108,6 @@ describe('SpeechRecognitionService', () => {
       stopRecognition();
       __emitEvent('end', {});
 
-      // 【根拠】stop() で明示的に停止した場合は再起動ループを終了し、onEnd を通知する
       expect(ExpoSpeechRecognitionModule.start).toHaveBeenCalledTimes(1);
       expect(onEnd).toHaveBeenCalledTimes(1);
     });

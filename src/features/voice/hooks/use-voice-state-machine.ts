@@ -155,8 +155,12 @@ export function useVoiceStateMachine(): UseVoiceStateMachineReturn {
         }
       },
       onEnd: () => {
-        // 【根拠】wakeword モードの end は自動再起動ループで処理される
-        //        （speech-recognition サービス内部で再起動するため、ここでは何もしない）
+        // 【根拠】continuous: true でもエラー等でセッションが終了する場合がある。
+        //        IDLE 状態かつ音声認識有効なら再開始する（稀なエラーリカバリ）
+        log('SM', 'wakeword session ended unexpectedly');
+        if (isMountedRef.current && isVoiceRecognitionEnabled) {
+          startWakewordListening();
+        }
       },
       onError: (err: string) => {
         warn('SM', `wakeword recognition error: ${err}`);
@@ -342,7 +346,7 @@ export function useVoiceStateMachine(): UseVoiceStateMachineReturn {
    * 【目的】isVoiceRecognitionEnabled の変更に反応する
    * 【根拠】OFF になったら認識を停止し IDLE に戻す。ON になったら wakeword 認識を開始。
    *        なぜ voiceState.state !== 'IDLE' ガードを外したか:
-   *        IDLE 状態でも wakeword 再起動ループが動作しているため、
+   *        IDLE 状態でも wakeword の continuous セッションが動作しているため、
    *        OFF 時は状態に関係なく abortRecognition() で停止する必要がある。
    */
   useEffect(() => {

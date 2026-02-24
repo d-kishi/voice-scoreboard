@@ -2,7 +2,7 @@
  * 【目的】expo-speech-recognition のラッパーサービス。音声認識の開始/停止/結果取得を提供する
  * 【根拠】ネイティブモジュールを直接使用せず、ラッパーを介することで:
  *        - wakeword / command 2つのモードを統一的に扱える
- *        - wakeword モードの自動再起動ループをカプセル化できる
+ *        - wakeword モードの continuous セッションを管理できる
  *        - テスト時にモック差し替えが容易になる
  *        Contract: SpeechRecognitionService Service（design.md 参照）
  */
@@ -55,7 +55,7 @@ const ANDROID_SILENCE_TIMEOUT_MS = 3000;
 /** 【目的】現在の認識セッションが動作中かどうかを示すフラグ */
 let isRunning = false;
 
-/** 【目的】現在のオプション（再起動ループで参照するため保持） */
+/** 【目的】現在のオプション（コールバック呼び出しで参照するため保持） */
 let currentOptions: SpeechRecognitionOptions | null = null;
 
 /** 【目的】登録済みリスナーの Subscription（クリーンアップ用） */
@@ -97,7 +97,7 @@ function addManagedListener(
 /**
  * 【目的】音声認識を開始する
  * 【根拠】モードに応じて ExpoSpeechRecognitionModule.start() のオプションを切り替える。
- *        wakeword モードでは end イベントで自動再起動ループを実行し、
+ *        wakeword モードでは continuous: true でセッションを維持し、
  *        IDLE 状態での常時リスニングを実現する。
  *        command モードでは contextualStrings でコマンド語彙の認識精度を向上させる。
  *
@@ -123,18 +123,12 @@ export function startRecognition(options: SpeechRecognitionOptions): void {
   });
 
   // 【目的】認識終了のイベントリスナー
-  // 【根拠】wakeword モードでは再起動ループを実行し、command モードでは onEnd を通知する
+  // 【根拠】continuous: true ではセッションが維持されるため、end は stop/abort/エラーによる
+  //        セッション終了時のみ発火する。全モード共通で onEnd を通知する。
   addManagedListener('end', () => {
-    if (isRunning && currentOptions?.mode === 'wakeword') {
-      // 【目的】wakeword モードの自動再起動。onEnd は通知しない
-      log('SR', 'end: wakeword mode, restarting');
-      ExpoSpeechRecognitionModule.start(buildStartOptions(currentOptions));
-    } else {
-      // 【目的】command モード、または stop/abort 後の終了通知
-      log('SR', `end: mode=${currentOptions?.mode ?? 'null'}, notifying onEnd`);
-      removeAllSubscriptions();
-      currentOptions?.onEnd();
-    }
+    log('SR', `end: mode=${currentOptions?.mode ?? 'null'}, isRunning=${isRunning}, notifying onEnd`);
+    removeAllSubscriptions();
+    currentOptions?.onEnd();
   });
 
   // 【目的】エラーのイベントリスナー
@@ -151,7 +145,7 @@ export function startRecognition(options: SpeechRecognitionOptions): void {
 /**
  * 【目的】モードに応じた start() オプションを構築する
  * 【根拠】wakeword モードと command モードで異なる設定を適用する。
- *        共通設定: lang, interimResults: true, continuous: false
+ *        wakeword: continuous: true（セッション維持）, command: continuous: false（単発認識）
  *        command 固有: contextualStrings, androidIntentOptions
  */
 function buildStartOptions(
@@ -160,7 +154,7 @@ function buildStartOptions(
   const baseOptions: Record<string, unknown> = {
     lang: options.lang,
     interimResults: true,
-    continuous: false,
+    continuous: options.mode === 'wakeword',
   };
 
   if (options.mode === 'command') {
@@ -176,7 +170,7 @@ function buildStartOptions(
 
 /**
  * 【目的】音声認識を停止する（最終結果を処理してから停止）
- * 【根拠】stop() は再起動ループフラグを false にし、
+ * 【根拠】stop() は isRunning を false にし、
  *        ExpoSpeechRecognitionModule.stop() を呼ぶ。
  *        end イベントで onEnd が通知される。
  */
@@ -188,7 +182,7 @@ export function stopRecognition(): void {
 
 /**
  * 【目的】音声認識を即座に中断する（最終結果なし）
- * 【根拠】abort() は再起動ループフラグを false にし、リスナーを解除してから
+ * 【根拠】abort() は isRunning を false にし、リスナーを解除してから
  *        ExpoSpeechRecognitionModule.abort() を呼ぶ。
  *        end イベントで onEnd が通知される。
  *        abort 後のイベント（result 等）は無視される。

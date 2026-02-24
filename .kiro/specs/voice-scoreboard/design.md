@@ -414,7 +414,7 @@ interface SpeechRecognitionService {
 - Invariants: 同時に1つの認識セッションのみ
 
 **Implementation Notes**
-- wakeword モード: `continuous: false`、`interimResults: true` で開始。`end` イベントで自動再起動
+- wakeword モード: `continuous: true`、`interimResults: true` で開始。セッションを維持し再起動ループ不要。予期外終了時は useVoiceStateMachine で再開始
 - command モード: `contextualStrings: ['右', '左', 'ロールバック', 'リセット']` を設定。5秒後に `stop()` を呼び出し
 
 #### SpeechSynthesisService

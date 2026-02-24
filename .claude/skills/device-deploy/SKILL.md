@@ -124,6 +124,7 @@ adb.exe -s $DEVICE_SERIAL shell "logcat -d" | grep ReactNativeJS
 
 ## WSL2 固有の注意事項
 
+- **サンドボックス無効化必須**: Gradle ビルド（Step 4）は `~/.gradle/` への書き込みが必要。Bash ツールで `dangerouslyDisableSandbox: true` を指定すること。サンドボックス有効のままだと `gradle-*.zip.lck (Read-only file system)` エラーで失敗する
 - **パス変換**: APK インストール時は Windows パス（`C:\\...`）を使用。WSL パス（`/mnt/c/...`）は adb.exe が解釈できない
 - **logcat パイプ問題**: `adb.exe logcat -d | grep ...` は WSL2 で空結果になることがある。`adb.exe shell "logcat -d"` 形式で回避
 - **adb ラッパー**: `~/.local/bin/adb` は `adb.exe` へのラッパー。直接 `adb.exe` を呼んでも同じ

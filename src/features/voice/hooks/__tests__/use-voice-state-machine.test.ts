@@ -620,6 +620,38 @@ describe('useVoiceStateMachine', () => {
   });
 
   // =================================================================
+  // wakeword セッション終了時の再開始
+  // =================================================================
+  describe('wakeword セッション終了時の再開始', () => {
+    it('IDLE 状態で wakeword セッションが終了すると再開始される', () => {
+      renderHook(() => useVoiceStateMachine());
+
+      // 【根拠】初回レンダリング時に state 効果 + settings 効果の両方で startRecognition が呼ばれる。
+      //        continuous: true でもエラー等でセッションが終了する場合がある。
+      //        onEnd が呼ばれたら、追加で startRecognition が呼ばれることを確認。
+      const callsBefore = mockStartRecognition.mock.calls.length;
+
+      act(() => {
+        const options = getLastRecognitionOptions();
+        options.onEnd();
+      });
+
+      expect(mockStartRecognition).toHaveBeenCalledTimes(callsBefore + 1);
+      expect(mockStartRecognition).toHaveBeenLastCalledWith(
+        expect.objectContaining({ mode: 'wakeword' })
+      );
+    });
+
+    it('音声認識 OFF の場合、wakeword セッション終了後に再開始しない', () => {
+      setupDefaultMocks({ isVoiceRecognitionEnabled: false });
+      renderHook(() => useVoiceStateMachine());
+
+      // 【根拠】音声認識が無効の場合は startRecognition 自体が呼ばれていない
+      expect(mockStartRecognition).not.toHaveBeenCalled();
+    });
+  });
+
+  // =================================================================
   // クリーンアップ
   // =================================================================
   describe('クリーンアップ', () => {
