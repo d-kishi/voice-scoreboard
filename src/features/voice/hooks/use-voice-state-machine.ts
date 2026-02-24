@@ -192,16 +192,21 @@ export function useVoiceStateMachine(): UseVoiceStateMachineReturn {
    * 【目的】コマンド認識（command モード）を開始する
    * 【根拠】LISTENING 状態でコマンド語彙（右/左/ロールバック/リセット）を認識し、
    *        検出したら COMMAND_DETECTED を dispatch して SPEAKING_ROGER に遷移する。
+   *        interim result（isFinal=false）でもコマンドを処理する理由:
+   *        Android SpeechRecognizer は短い単語（「右」「左」）に対して
+   *        isFinal=true を返さないことがあり、タイムアウトまで検知不能になるため。
+   *        wakeword とは異なり、コマンドは限定語彙の includes マッチなので
+   *        interim でも誤検知リスクは極めて低い。
    */
   function startCommandListening(): void {
     startRecognition({
       mode: 'command',
       lang: 'ja-JP',
       onResult: (transcript: string, isFinal: boolean) => {
-        if (!isFinal || !isMountedRef.current) return;
+        if (!isMountedRef.current) return;
         const command = parseCommand(transcript);
-        log('SM', `command result: "${transcript}" parsed=${command ?? 'null'}`);
         if (command) {
+          log('SM', `command result: "${transcript}" isFinal=${isFinal} parsed=${command}`);
           dispatch({ type: 'COMMAND_DETECTED', command });
         }
       },

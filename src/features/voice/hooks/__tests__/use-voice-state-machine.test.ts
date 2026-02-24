@@ -342,6 +342,19 @@ describe('useVoiceStateMachine', () => {
       expect(mockIncrementScore).toHaveBeenCalledWith('left');
     });
 
+    it('interim result（isFinal=false）でもコマンドを検知する', () => {
+      const { result } = renderHook(() => useVoiceStateMachine());
+      advanceToListening(result);
+
+      // interim result でコマンド検知
+      act(() => {
+        const options = getLastRecognitionOptions();
+        options.onResult('右', false); // isFinal=false
+      });
+
+      expect(result.current.state).toBe('SPEAKING_ROGER');
+    });
+
     it('得点加算時はスコア読み上げなし（SPEAKING_SCORE をスキップ）', () => {
       const { result } = renderHook(() => useVoiceStateMachine());
       advanceToListening(result);
