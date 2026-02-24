@@ -10,6 +10,7 @@
  */
 
 import { Audio } from 'expo-av';
+import { log, warn } from '../../../utils/logger';
 
 // =================================================================
 // 型定義
@@ -76,8 +77,9 @@ export async function preload(): Promise<void> {
   try {
     const { sound } = await Audio.Sound.createAsync(SOUND_ASSETS.whistle);
     soundCache.whistle = sound;
-  } catch (error) {
-    console.warn('[SoundService] Failed to preload whistle sound:', error);
+    log('SND', 'preload: whistle loaded');
+  } catch (err) {
+    warn('SND', `preload: whistle failed: ${err}`);
     soundCache.whistle = null;
   }
 }
@@ -106,7 +108,12 @@ export async function play(
   const sound = soundCache[type];
 
   // 【目的】Sound が取得できなかった場合は音なしで続行
-  if (!sound) return;
+  if (!sound) {
+    warn('SND', `play: ${type} not loaded, skipping`);
+    return;
+  }
+
+  log('SND', `play: ${type}${maxDurationMs ? ` maxDuration=${maxDurationMs}ms` : ''}`);
 
   // 【根拠】TypeScript のクロージャ推論で sound が null と推論されるのを防ぐ。
   //        上の null ガード後なので、ここで non-null が保証されている。
@@ -117,6 +124,7 @@ export async function play(
 
     // 【目的】再生を停止してクリーンアップする共通関数
     function finish(): void {
+      log('SND', `play done: ${type}`);
       if (cutoffTimer !== null) {
         clearTimeout(cutoffTimer);
         cutoffTimer = null;

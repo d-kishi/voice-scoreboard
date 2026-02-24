@@ -56,8 +56,7 @@ describe('SoundService', () => {
       await expect(preload()).resolves.toBeUndefined();
 
       expect(consoleSpy).toHaveBeenCalledWith(
-        expect.stringContaining('SoundService'),
-        expect.any(Error)
+        expect.stringContaining('VSB:SND')
       );
       consoleSpy.mockRestore();
     });

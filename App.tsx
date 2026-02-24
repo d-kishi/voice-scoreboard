@@ -21,6 +21,7 @@ class ErrorBoundary extends React.Component<
 > {
   state = { error: null as Error | null };
   static getDerivedStateFromError(error: Error) {
+    console.error(`[VSB:APP] ErrorBoundary caught: ${error.message}`, error.stack);
     return { error };
   }
   render() {

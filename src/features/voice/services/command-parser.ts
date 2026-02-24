@@ -7,6 +7,7 @@
  */
 
 import type { VoiceCommand } from '../types/voice-types';
+import { log } from '../../../utils/logger';
 
 // =================================================================
 // コマンドマッピング
@@ -42,9 +43,11 @@ const COMMAND_MAP: ReadonlyArray<{
 export function parseCommand(transcript: string): VoiceCommand | null {
   for (const { keyword, command } of COMMAND_MAP) {
     if (transcript.includes(keyword)) {
+      log('CMD', `parseCommand("${transcript}") = ${command}`);
       return command;
     }
   }
+  log('CMD', `parseCommand("${transcript}") = null`);
   return null;
 }
 
@@ -56,5 +59,7 @@ export function parseCommand(transcript: string): VoiceCommand | null {
  * @returns ウェイクワードが含まれていれば true
  */
 export function isWakeword(transcript: string): boolean {
-  return transcript.includes('スコア');
+  const result = transcript.includes('スコア');
+  log('CMD', `isWakeword("${transcript}") = ${result}`);
+  return result;
 }

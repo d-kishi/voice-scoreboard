@@ -8,6 +8,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
+import { log } from '../utils/logger';
 
 /**
  * 【目的】設定の状態を定義する型
@@ -55,15 +56,19 @@ export const useSettingsStore = create<SettingsStore>()(
       ...INITIAL_STATE,
 
       toggleVoiceRecognition: () => {
-        set((state) => ({
-          isVoiceRecognitionEnabled: !state.isVoiceRecognitionEnabled,
-        }));
+        set((state) => {
+          const next = !state.isVoiceRecognitionEnabled;
+          log('SET', `toggleVoiceRecognition: ${state.isVoiceRecognitionEnabled} -> ${next}`);
+          return { isVoiceRecognitionEnabled: next };
+        });
       },
 
       toggleSpeech: () => {
-        set((state) => ({
-          isSpeechEnabled: !state.isSpeechEnabled,
-        }));
+        set((state) => {
+          const next = !state.isSpeechEnabled;
+          log('SET', `toggleSpeech: ${state.isSpeechEnabled} -> ${next}`);
+          return { isSpeechEnabled: next };
+        });
       },
     }),
     {

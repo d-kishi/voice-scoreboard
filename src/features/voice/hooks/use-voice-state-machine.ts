@@ -32,6 +32,7 @@ import {
 import { parseCommand, isWakeword } from '../services/command-parser';
 import { useScore } from '../../score/hooks/use-score';
 import { useSettings } from '../../settings/hooks/use-settings';
+import { log, warn } from '../../../utils/logger';
 
 // =================================================================
 // 公開インターフェース
@@ -61,10 +62,17 @@ export interface UseVoiceStateMachineReturn {
  *        音声認識と読み上げの排他制御を状態マシンレベルで保証する。
  */
 export function useVoiceStateMachine(): UseVoiceStateMachineReturn {
-  const [voiceState, dispatch] = useReducer(
+  const [voiceState, rawDispatch] = useReducer(
     voiceStateReducer,
     INITIAL_VOICE_STATE
   );
+
+  // 【目的】全アクションをログ付きで dispatch する
+  const dispatch: typeof rawDispatch = useCallback((action) => {
+    const detail = 'command' in action ? ` cmd=${action.command}` : '';
+    log('SM', `dispatch: ${action.type}${detail}`);
+    rawDispatch(action);
+  }, []);
   const { incrementScore, rollback, reset, leftScore, rightScore } =
     useScore();
   const { isVoiceRecognitionEnabled, isSpeechEnabled } = useSettings();
@@ -138,16 +146,20 @@ export function useVoiceStateMachine(): UseVoiceStateMachineReturn {
       mode: 'wakeword',
       lang: 'ja-JP',
       onResult: (transcript: string, isFinal: boolean) => {
-        if (isFinal && isWakeword(transcript) && isMountedRef.current) {
-          dispatch({ type: 'WAKEWORD_DETECTED' });
+        if (isFinal) {
+          const matched = isWakeword(transcript);
+          log('SM', `wakeword result: "${transcript}" matched=${matched}`);
+          if (matched && isMountedRef.current) {
+            dispatch({ type: 'WAKEWORD_DETECTED' });
+          }
         }
       },
       onEnd: () => {
         // 【根拠】wakeword モードの end は自動再起動ループで処理される
         //        （speech-recognition サービス内部で再起動するため、ここでは何もしない）
       },
-      onError: (error: string) => {
-        console.warn('[VoiceStateMachine] Wakeword recognition error:', error);
+      onError: (err: string) => {
+        warn('SM', `wakeword recognition error: ${err}`);
       },
     });
   }
@@ -164,6 +176,7 @@ export function useVoiceStateMachine(): UseVoiceStateMachineReturn {
       onResult: (transcript: string, isFinal: boolean) => {
         if (!isFinal || !isMountedRef.current) return;
         const command = parseCommand(transcript);
+        log('SM', `command result: "${transcript}" parsed=${command ?? 'null'}`);
         if (command) {
           dispatch({ type: 'COMMAND_DETECTED', command });
         }
@@ -172,8 +185,8 @@ export function useVoiceStateMachine(): UseVoiceStateMachineReturn {
         // 【根拠】command モードの end は認識エンジンの自然終了。
         //        タイムアウトタイマーが別途管理しているため、ここでは何もしない。
       },
-      onError: (error: string) => {
-        console.warn('[VoiceStateMachine] Command recognition error:', error);
+      onError: (err: string) => {
+        warn('SM', `command recognition error: ${err}`);
       },
     });
   }
@@ -190,6 +203,7 @@ export function useVoiceStateMachine(): UseVoiceStateMachineReturn {
       remaining -= 1;
       if (remaining <= 0) {
         clearCountdownTimer();
+        log('SM', 'countdown timeout');
         if (isMountedRef.current) {
           dispatch({ type: 'LISTENING_TIMEOUT' });
         }
@@ -209,11 +223,12 @@ export function useVoiceStateMachine(): UseVoiceStateMachineReturn {
   function executeCommand(): void {
     const command = pendingCommandRef.current;
     if (!command) {
-      // 【根拠】防御的ガード。pendingCommand がない場合は IDLE に戻る
+      warn('SM', 'executeCommand: no pendingCommand, returning to IDLE');
       dispatch({ type: 'COMMAND_EXECUTED' });
       return;
     }
 
+    log('SM', `executeCommand: ${command}`);
     switch (command) {
       case 'right':
         incrementScore('right');
@@ -248,6 +263,7 @@ export function useVoiceStateMachine(): UseVoiceStateMachineReturn {
     switch (voiceState.state) {
       case 'IDLE':
         // 【目的】ウェイクワード認識を開始（isVoiceRecognitionEnabled の場合のみ）
+        log('SM', `entering IDLE, voiceRecognition=${isVoiceRecognitionEnabled}`);
         clearCountdownTimer();
         if (isVoiceRecognitionEnabled) {
           startWakewordListening();
@@ -256,6 +272,7 @@ export function useVoiceStateMachine(): UseVoiceStateMachineReturn {
 
       case 'SPEAKING_READY':
         // 【目的】認識を停止し、Ready を読み上げ
+        log('SM', `entering SPEAKING_READY, speech=${isSpeechEnabledRef.current}`);
         abortRecognition();
         if (isSpeechEnabledRef.current) {
           speakReady(() => {
@@ -271,12 +288,14 @@ export function useVoiceStateMachine(): UseVoiceStateMachineReturn {
 
       case 'LISTENING':
         // 【目的】コマンド認識を開始 + カウントダウンタイマー開始
+        log('SM', 'entering LISTENING, starting command + countdown');
         startCommandListening();
         startCountdownTimer();
         break;
 
       case 'SPEAKING_ROGER':
         // 【目的】認識を停止し、Roger を読み上げ
+        log('SM', `entering SPEAKING_ROGER, pendingCommand=${voiceState.pendingCommand}, speech=${isSpeechEnabledRef.current}`);
         abortRecognition();
         clearCountdownTimer();
         if (isSpeechEnabledRef.current) {
@@ -292,25 +311,25 @@ export function useVoiceStateMachine(): UseVoiceStateMachineReturn {
 
       case 'EXECUTING':
         // 【目的】pendingCommand に基づいてスコア操作を実行
+        log('SM', `entering EXECUTING, pendingCommand=${voiceState.pendingCommand}`);
         executeCommand();
         break;
 
-      case 'SPEAKING_SCORE':
+      case 'SPEAKING_SCORE': {
         // 【目的】現在のスコアを読み上げ
+        const { leftScore: l, rightScore: r } = scoreRef.current;
+        log('SM', `entering SPEAKING_SCORE, score=${l}-${r}, speech=${isSpeechEnabledRef.current}`);
         if (isSpeechEnabledRef.current) {
-          speakScore(
-            scoreRef.current.leftScore,
-            scoreRef.current.rightScore,
-            () => {
-              if (isMountedRef.current) {
-                dispatch({ type: 'SPEECH_SCORE_DONE' });
-              }
+          speakScore(l, r, () => {
+            if (isMountedRef.current) {
+              dispatch({ type: 'SPEECH_SCORE_DONE' });
             }
-          );
+          });
         } else {
           dispatch({ type: 'SPEECH_SCORE_DONE' });
         }
         break;
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [voiceState.state]);
@@ -325,6 +344,7 @@ export function useVoiceStateMachine(): UseVoiceStateMachineReturn {
    */
   useEffect(() => {
     if (!isVoiceRecognitionEnabled && voiceState.state !== 'IDLE') {
+      log('SM', `voiceRecognition toggled OFF in state=${voiceState.state}, dispatching STOP`);
       dispatch({ type: 'STOP' });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -342,11 +362,12 @@ export function useVoiceStateMachine(): UseVoiceStateMachineReturn {
   }, [isVoiceRecognitionEnabled]);
 
   const stop = useCallback(() => {
+    log('SM', 'stop() called, cleaning up all services');
     clearCountdownTimer();
     abortRecognition();
     stopSpeaking();
     dispatch({ type: 'STOP' });
-  }, [clearCountdownTimer]);
+  }, [clearCountdownTimer, dispatch]);
 
   return {
     state: voiceState.state,

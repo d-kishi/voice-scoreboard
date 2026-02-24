@@ -8,6 +8,7 @@
  */
 
 import { ExpoSpeechRecognitionModule } from 'expo-speech-recognition';
+import { log, warn } from '../../../utils/logger';
 
 // =================================================================
 // 型定義
@@ -108,6 +109,7 @@ export function startRecognition(options: SpeechRecognitionOptions): void {
 
   isRunning = true;
   currentOptions = options;
+  log('SR', `startRecognition mode=${options.mode} lang=${options.lang}`);
 
   // 【目的】認識結果のイベントリスナー
   addManagedListener('result', (data: unknown) => {
@@ -116,6 +118,7 @@ export function startRecognition(options: SpeechRecognitionOptions): void {
       isFinal: boolean;
     };
     const transcript = event.results[0]?.transcript ?? '';
+    log('SR', `result: transcript="${transcript}" isFinal=${event.isFinal}`);
     currentOptions?.onResult(transcript, event.isFinal);
   });
 
@@ -124,9 +127,11 @@ export function startRecognition(options: SpeechRecognitionOptions): void {
   addManagedListener('end', () => {
     if (isRunning && currentOptions?.mode === 'wakeword') {
       // 【目的】wakeword モードの自動再起動。onEnd は通知しない
+      log('SR', 'end: wakeword mode, restarting');
       ExpoSpeechRecognitionModule.start(buildStartOptions(currentOptions));
     } else {
       // 【目的】command モード、または stop/abort 後の終了通知
+      log('SR', `end: mode=${currentOptions?.mode ?? 'null'}, notifying onEnd`);
       removeAllSubscriptions();
       currentOptions?.onEnd();
     }
@@ -135,6 +140,7 @@ export function startRecognition(options: SpeechRecognitionOptions): void {
   // 【目的】エラーのイベントリスナー
   addManagedListener('error', (data: unknown) => {
     const event = data as { error: string; message: string };
+    warn('SR', `error: code=${event.error} message=${event.message}`);
     currentOptions?.onError(event.error);
   });
 
@@ -175,6 +181,7 @@ function buildStartOptions(
  *        end イベントで onEnd が通知される。
  */
 export function stopRecognition(): void {
+  log('SR', 'stopRecognition');
   isRunning = false;
   ExpoSpeechRecognitionModule.stop();
 }
@@ -187,6 +194,8 @@ export function stopRecognition(): void {
  *        abort 後のイベント（result 等）は無視される。
  */
 export function abortRecognition(): void {
+  const hadSession = isRunning;
+  log('SR', `abortRecognition (${hadSession ? 'had active session' : 'no session'})`);
   isRunning = false;
 
   // 【目的】abort 用の end リスナーだけを残す

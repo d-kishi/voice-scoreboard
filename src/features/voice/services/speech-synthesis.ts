@@ -8,6 +8,7 @@
  */
 
 import * as Speech from 'expo-speech';
+import { log } from '../../../utils/logger';
 
 // =================================================================
 // 定数
@@ -33,10 +34,17 @@ const LANGUAGE = 'ja-JP';
  * @param onDone 読み上げ完了時（停止含む）に呼ばれるコールバック
  */
 export function speak(text: string, onDone: () => void): void {
+  log('SS', `speak: "${text}"`);
   Speech.speak(text, {
     language: LANGUAGE,
-    onDone,
-    onStopped: onDone,
+    onDone: () => {
+      log('SS', `speak done: "${text}"`);
+      onDone();
+    },
+    onStopped: () => {
+      log('SS', `speak stopped: "${text}"`);
+      onDone();
+    },
   });
 }
 
@@ -46,6 +54,7 @@ export function speak(text: string, onDone: () => void): void {
  *        進行中の読み上げを中断するために使用する
  */
 export function stopSpeaking(): void {
+  log('SS', 'stopSpeaking');
   Speech.stop();
 }
 

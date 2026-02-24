@@ -136,9 +136,10 @@ const handleSpeechResult = (result: string) => {
 
 - **Agent Teams**: 有効（ユーザ設定 `~/.claude/settings.json` で `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` を設定済み）
 
-## エミュレータプレビュー
+## デプロイスキル
 
-**UI 確認時は `/emulator-preview` スキルを使用する。** WSL2 + Android エミュレータのビルド・起動手順が定義されている。
+- **`/emulator-preview`**: エミュレータへのビルド・デプロイ。`--debug`/`--release`/`--logcat` オプション対応
+- **`/device-deploy`**: 実機（Pixel 7a）へのビルド・デプロイ。`release`/`debug`/`--clean`/`--logcat`/`--emulator` オプション対応
 
 ## テスト環境のナレッジ
 
@@ -183,12 +184,43 @@ Jest モック環境では検出できず、ネイティブビルドで初めて
 - **`__esModule: true` + `default` モックの罠**: `__mocks__/` に `__esModule: true` と `default: obj` を設定すると、`import X from 'module'` がテストでは通るが、実際のモジュールに default export がない場合、実行時に `undefined` になる。モック対象モジュールの実際のエクスポート形式（default vs named）を必ず確認すること
 - **`require()` パスの検証不可**: `require('../../assets/...')` のような相対パスの深度はモック環境では検証されない。ネイティブビルド（Metro バンドル）で初めてパス解決エラーになる
 
-### release ビルドのデバッグ手法
+### デバッグ手法（WSL2 環境）
 
-release ビルドでは Red Box や `console.log` 出力が表示されない。以下の手法を併用する：
+#### ビルド・デプロイスキル
+
+- **`/device-deploy`**: 実機（Pixel 7a）へのビルド・デプロイ。`release`/`debug`/`--clean`/`--logcat` オプション対応
+- **`/emulator-preview`**: エミュレータへのビルド・デプロイ。`--debug`/`--release`/`--logcat` オプション対応
+
+#### logcat コマンドリファレンス
+
+**重要**: WSL2 では `adb.exe logcat -d | grep ...` のパイプが空結果になることがある。`adb.exe shell "logcat ..."` 形式を使用する。
+
+```bash
+# バッファクリア → ストリーミング
+adb.exe -s 32271JEHN19359 shell "logcat -c"
+adb.exe -s 32271JEHN19359 shell "logcat -s ReactNativeJS:V"
+
+# ダンプモード（過去ログ一括取得）
+adb.exe -s 32271JEHN19359 shell "logcat -d" | grep ReactNativeJS
+```
+
+release ビルドでも `console.log` / `console.warn` は削除されない（metro.config.js / babel.config.js に除去設定なし）。logcat で出力を確認可能。
+
+#### Metro 接続（debug ビルド時）
+
+`adb reverse` + `REACT_NATIVE_PACKAGER_HOSTNAME` で WSL2 ↔ デバイス間の Metro 接続が可能:
+
+```bash
+adb.exe -s $DEVICE_SERIAL reverse tcp:8081 tcp:8081
+WSL_IP=$(hostname -I | awk '{print $1}')
+CI=1 REACT_NATIVE_PACKAGER_HOSTNAME=$WSL_IP bunx expo start --port 8081
+```
+
+WSL2 IP は再起動で変わるため `hostname -I` で動的取得する。M1 時代の「Metro タイムアウト」は `REACT_NATIVE_PACKAGER_HOSTNAME` 未設定が原因だった。
+
+#### ErrorBoundary
 
 - **ErrorBoundary**: React ツリーのクラッシュを画面上に表示（JS レベルのエラーをキャッチ）
-- **logcat**: ネイティブエラーや `console.warn` の確認。`adb.exe logcat -d | grep ReactNativeJS` でフィルタリング
 - ErrorBoundary で何も表示されずブラックアウトする場合は、ネイティブレベルのクラッシュ（New Architecture の Bridgeless 例外ハンドラが例外を握りつぶす可能性あり）
 
 ## Android ビルド環境の注意事項（WSL2）

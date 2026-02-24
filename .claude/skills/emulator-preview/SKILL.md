@@ -12,7 +12,12 @@ description: >-
 # Emulator Preview（WSL2 + Android）
 
 WSL2 上のプロジェクトを Android エミュレータで表示するワークフロー。
-Metro 接続が WSL2 で不安定なため、release ビルド（JS バンドル埋め込み）を使用する。
+
+## 引数
+
+| 引数 | 説明 |
+|------|------|
+| `--logcat` | デプロイ後に logcat モニタリングを開始 |
 
 ## 環境情報
 
@@ -47,14 +52,22 @@ adb devices
 - `app.json` や native plugin を変更した → `bunx expo prebuild --platform android --clean` を実行
 - JS/TS のみの変更 → prebuild 不要、Step 3 へ
 
-### Step 3: release ビルド
+### Step 3: ビルド
+
+実機（arm64）も接続されている場合、`expo run:android` が arm64 を自動選択してしまう。
+エミュレータ（x86_64）向けには **Gradle を直接実行**してアーキテクチャを明示する:
 
 ```bash
-bunx expo run:android --variant release
+cd /mnt/c/Develop/voice-scoreboard/android && \
+  ORG_GRADLE_PROJECT_reactNativeArchitectures=x86_64 \
+  CMAKE_VERSION=3.28.3 \
+  ./gradlew app:assembleRelease -x lint -x test --configure-on-demand --build-cache
 ```
 
+実機が未接続で、エミュレータのみの場合は `bunx expo run:android --variant release` でも可。
+
 - 初回: 20〜26 分（9P ファイルシステムブリッジの影響）
-- 2 回目以降: Gradle キャッシュにより短縮
+- 2 回目以降: Gradle キャッシュにより短縮（CMake キャッシュ済みなら 5〜9 分）
 - **バックグラウンドで実行**し、ユーザーに所要時間を伝える
 - ビルド中はユーザーが他の作業を行えるよう配慮する
 
@@ -73,7 +86,22 @@ adb.exe install -r -d "C:\\Develop\\voice-scoreboard\\android\\app\\build\\outpu
 adb.exe shell am start -n com.voicescoreboard.app/.MainActivity
 ```
 
-### Step 6: 確認報告
+### Step 6: logcat モニタリング（`--logcat` 時、または任意）
+
+**重要**: WSL2 では `adb.exe logcat` のパイプが正常に動作しないことがある。`adb.exe shell "logcat ..."` 形式を使用する。
+
+```bash
+# バッファクリア
+adb.exe shell "logcat -c"
+
+# ReactNativeJS ログをストリーミング（バックグラウンド）
+adb.exe shell "logcat -s ReactNativeJS:V" &
+
+# ダンプモード（過去ログ一括取得）
+adb.exe shell "logcat -d" | grep ReactNativeJS
+```
+
+### Step 7: 確認報告
 
 ユーザーに以下を報告する:
 - アプリが起動したこと
@@ -82,7 +110,7 @@ adb.exe shell am start -n com.voicescoreboard.app/.MainActivity
 
 ## WSL2 固有の注意事項
 
-- **Metro 不可**: WSL2 ↔ エミュレータ間の Metro 接続はタイムアウトする。必ず release ビルドを使用
 - **パス変換**: APK インストール時は Windows パス（`C:\\...`）を使用。WSL パス（`/mnt/c/...`）は adb.exe が解釈できない
+- **logcat パイプ問題**: `adb.exe logcat -d | grep ...` は WSL2 で空結果になることがある。`adb.exe shell "logcat -d"` 形式で回避
 - **adb ラッパー**: `~/.local/bin/adb` は `adb.exe` へのラッパー。`$ANDROID_HOME/platform-tools/adb` は `adb.exe` へのシンボリックリンク
 - **ビルド速度**: `/mnt/c/` 上の Gradle ビルドは遅い。ユーザーに待ち時間を事前に伝える

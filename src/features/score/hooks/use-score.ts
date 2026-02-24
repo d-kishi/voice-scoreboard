@@ -12,6 +12,7 @@ import {
   checkGameEnd,
   DEFAULT_GAME_RULES_CONFIG,
 } from '../services/game-rules';
+import { log } from '../../../utils/logger';
 
 /**
  * 【目的】useScore hook の公開インターフェース
@@ -67,6 +68,7 @@ export function useScore(): UseScoreReturn {
     const { leftScore: newLeft, rightScore: newRight } =
       useScoreStore.getState();
     const gameEnd = checkGameEnd(newLeft, newRight, DEFAULT_GAME_RULES_CONFIG);
+    log('SCR', `incrementScore side=${side}, score=${newLeft}-${newRight}, gameEnd=${gameEnd}`);
     if (gameEnd) {
       useScoreStore.getState().setGameEnd(true);
     }
@@ -102,6 +104,7 @@ export function useScore(): UseScoreReturn {
     const { leftScore: newLeft, rightScore: newRight } =
       useScoreStore.getState();
     const gameEnd = checkGameEnd(newLeft, newRight, DEFAULT_GAME_RULES_CONFIG);
+    log('SCR', `rollback, score=${newLeft}-${newRight}`);
     useScoreStore.getState().setGameEnd(gameEnd);
   };
 
@@ -111,6 +114,7 @@ export function useScore(): UseScoreReturn {
    *        zundo 履歴のクリアを一括で行う。
    */
   const reset = (): void => {
+    log('SCR', 'reset');
     useScoreStore.getState().reset();
   };
 
