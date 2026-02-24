@@ -5,9 +5,10 @@ import { useScoreStore } from '../../../../stores/score-store';
 import { useSettingsStore } from '../../../../stores/settings-store';
 import { ControlBar } from '../ControlBar';
 
-// 【目的】speech-recognition の requestPermissions をモック化
-// 【根拠】権限リクエストの結果に応じた ControlBar の振る舞いをテストする
+// 【目的】speech-recognition の checkPermissions / requestPermissions をモック化
+// 【根拠】権限チェック・リクエストの結果に応じた ControlBar の振る舞いをテストする
 jest.mock('../../../voice/services/speech-recognition', () => ({
+  checkPermissions: jest.fn(),
   requestPermissions: jest.fn(),
 }));
 
@@ -25,7 +26,7 @@ jest.spyOn(Alert, 'alert');
  *        - 音声入力 ON 時にマイク権限をリクエストし、拒否時はトグルを ON にしない
  */
 describe('ControlBar', () => {
-  const { requestPermissions } = require('../../../voice/services/speech-recognition');
+  const { checkPermissions, requestPermissions } = require('../../../voice/services/speech-recognition');
 
   beforeEach(() => {
     useScoreStore.setState({ leftScore: 0, rightScore: 0, isGameEnd: false });
@@ -39,6 +40,9 @@ describe('ControlBar', () => {
     });
     jest.clearAllMocks();
     // 【目的】デフォルトでは権限が許可される想定
+    // 【根拠】checkPermissions は既に許可済みの場合 true を返す。
+    //        requestPermissions は checkPermissions が false の場合のみ呼ばれる。
+    checkPermissions.mockResolvedValue(true);
     requestPermissions.mockResolvedValue(true);
   });
 
@@ -55,8 +59,8 @@ describe('ControlBar', () => {
       expect(screen.getByText('読み上げ')).toBeTruthy();
     });
 
-    it('音声入力トグルの OFF→ON で権限リクエストが呼ばれる', async () => {
-      // 【目的】OFF 状態からトグル ON 時に requestPermissions が呼ばれることを検証
+    it('音声入力トグルの OFF→ON で権限チェックが呼ばれる', async () => {
+      // 【目的】OFF 状態からトグル ON 時に checkPermissions が呼ばれることを検証
       useSettingsStore.setState({ isVoiceRecognitionEnabled: false });
 
       render(<ControlBar />);
@@ -64,11 +68,25 @@ describe('ControlBar', () => {
         fireEvent.press(screen.getByTestId('toggle-voice'));
       });
 
-      expect(requestPermissions).toHaveBeenCalled();
+      expect(checkPermissions).toHaveBeenCalled();
     });
 
-    it('権限が許可された場合、音声入力がONになる', async () => {
+    it('権限が既に許可済みの場合、requestPermissions を呼ばずに ON になる', async () => {
       useSettingsStore.setState({ isVoiceRecognitionEnabled: false });
+      checkPermissions.mockResolvedValue(true);
+
+      render(<ControlBar />);
+      await act(async () => {
+        fireEvent.press(screen.getByTestId('toggle-voice'));
+      });
+
+      expect(requestPermissions).not.toHaveBeenCalled();
+      expect(useSettingsStore.getState().isVoiceRecognitionEnabled).toBe(true);
+    });
+
+    it('権限未許可 → requestPermissions で許可された場合、ON になる', async () => {
+      useSettingsStore.setState({ isVoiceRecognitionEnabled: false });
+      checkPermissions.mockResolvedValue(false);
       requestPermissions.mockResolvedValue(true);
 
       render(<ControlBar />);
@@ -76,11 +94,13 @@ describe('ControlBar', () => {
         fireEvent.press(screen.getByTestId('toggle-voice'));
       });
 
+      expect(requestPermissions).toHaveBeenCalled();
       expect(useSettingsStore.getState().isVoiceRecognitionEnabled).toBe(true);
     });
 
     it('権限が拒否された場合、音声入力がOFFのままでAlertが表示される', async () => {
       useSettingsStore.setState({ isVoiceRecognitionEnabled: false });
+      checkPermissions.mockResolvedValue(false);
       requestPermissions.mockResolvedValue(false);
 
       render(<ControlBar />);

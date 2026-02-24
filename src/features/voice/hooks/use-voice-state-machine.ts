@@ -340,12 +340,23 @@ export function useVoiceStateMachine(): UseVoiceStateMachineReturn {
 
   /**
    * 【目的】isVoiceRecognitionEnabled の変更に反応する
-   * 【根拠】OFF になったら即座に STOP。ON になったら IDLE 状態で認識を開始。
+   * 【根拠】OFF になったら認識を停止し IDLE に戻す。ON になったら wakeword 認識を開始。
+   *        なぜ voiceState.state !== 'IDLE' ガードを外したか:
+   *        IDLE 状態でも wakeword 再起動ループが動作しているため、
+   *        OFF 時は状態に関係なく abortRecognition() で停止する必要がある。
    */
   useEffect(() => {
-    if (!isVoiceRecognitionEnabled && voiceState.state !== 'IDLE') {
-      log('SM', `voiceRecognition toggled OFF in state=${voiceState.state}, dispatching STOP`);
-      dispatch({ type: 'STOP' });
+    if (!isVoiceRecognitionEnabled) {
+      log('SM', `voiceRecognition toggled OFF in state=${voiceState.state}, aborting recognition`);
+      abortRecognition();
+      clearCountdownTimer();
+      if (voiceState.state !== 'IDLE') {
+        dispatch({ type: 'STOP' });
+      }
+    } else if (voiceState.state === 'IDLE') {
+      // 【目的】ON に戻った時、IDLE 状態なら wakeword 認識を再開
+      log('SM', 'voiceRecognition toggled ON in IDLE, starting wakeword listening');
+      startWakewordListening();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isVoiceRecognitionEnabled]);

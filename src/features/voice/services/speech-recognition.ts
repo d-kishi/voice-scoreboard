@@ -222,6 +222,17 @@ export async function isAvailable(): Promise<boolean> {
 }
 
 /**
+ * 【目的】マイク権限の現在の状態を確認する（ダイアログを表示しない）
+ * 【根拠】既に権限が付与済みかどうかを事前チェックし、
+ *        不要な requestPermissions 呼び出しを回避する。
+ */
+export async function checkPermissions(): Promise<boolean> {
+  const result =
+    await ExpoSpeechRecognitionModule.getPermissionsAsync();
+  return result.granted;
+}
+
+/**
  * 【目的】マイク権限を要求し、結果を返す
  * 【根拠】音声認識にはマイク権限が必須。権限フローを簡潔に扱えるよう、
  *        granted の boolean のみを返す。

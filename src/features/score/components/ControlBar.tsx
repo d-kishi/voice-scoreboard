@@ -2,9 +2,13 @@ import { Feather, Ionicons } from '@expo/vector-icons';
 import React, { useState } from 'react';
 import { Alert, Linking, Pressable, Text, View } from 'react-native';
 import { useSettings } from '../../settings/hooks/use-settings';
-import { requestPermissions } from '../../voice/services/speech-recognition';
+import {
+  checkPermissions,
+  requestPermissions,
+} from '../../voice/services/speech-recognition';
 import { useScore } from '../hooks/use-score';
 import { ResetDialog } from './ResetDialog';
+import { log } from '../../../utils/logger';
 
 /**
  * 【目的】画面下端に固定する操作バーコンポーネント
@@ -31,30 +35,44 @@ export function ControlBar() {
   // 【根拠】design.md: マイク権限未許可時は音声機能を無効化し UI で通知。
   //        権限拒否時は Alert で通知し、設定画面への誘導を提供する。
   //        OFF→ON 時のみ権限チェック。ON→OFF は無条件で切り替え。
+  //        なぜ checkPermissions → requestPermissions の 2 段階か:
+  //        requestPermissions は内部で SpeechRecognizer を操作する可能性があり、
+  //        abort 直後に呼ぶと resolve しないケースがある。既に許可済みなら
+  //        checkPermissions（getPermissionsAsync）で十分。
   const handleToggleVoiceRecognition = async () => {
+    log('APP', `handleToggleVoiceRecognition: isRequesting=${isRequesting}, current=${isVoiceRecognitionEnabled}`);
     if (isRequesting) return;
     const willBeEnabled = !isVoiceRecognitionEnabled;
 
     if (willBeEnabled) {
       setIsRequesting(true);
       try {
-        const granted = await requestPermissions();
-        if (!granted) {
-          Alert.alert(
-            'マイク権限が必要です',
-            '音声入力を使用するにはマイクへのアクセスを許可してください。',
-            [
-              { text: 'キャンセル', style: 'cancel' },
-              { text: '設定を開く', onPress: () => Linking.openSettings() },
-            ],
-          );
-          return;
+        // 【目的】まず既存の権限状態を確認（ダイアログなし）
+        const alreadyGranted = await checkPermissions();
+        log('APP', `checkPermissions: alreadyGranted=${alreadyGranted}`);
+
+        if (!alreadyGranted) {
+          // 【目的】未許可の場合のみ権限リクエストダイアログを表示
+          const granted = await requestPermissions();
+          log('APP', `requestPermissions: granted=${granted}`);
+          if (!granted) {
+            Alert.alert(
+              'マイク権限が必要です',
+              '音声入力を使用するにはマイクへのアクセスを許可してください。',
+              [
+                { text: 'キャンセル', style: 'cancel' },
+                { text: '設定を開く', onPress: () => Linking.openSettings() },
+              ],
+            );
+            return;
+          }
         }
       } finally {
         setIsRequesting(false);
       }
     }
 
+    log('APP', `calling toggleVoiceRecognition, willBeEnabled=${willBeEnabled}`);
     toggleVoiceRecognition();
   };
 
