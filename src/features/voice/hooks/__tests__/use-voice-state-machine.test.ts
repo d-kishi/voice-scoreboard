@@ -649,6 +649,30 @@ describe('useVoiceStateMachine', () => {
       // 【根拠】音声認識が無効の場合は startRecognition 自体が呼ばれていない
       expect(mockStartRecognition).not.toHaveBeenCalled();
     });
+
+    it('SPEAKING_READY 状態で wakeword セッションが終了しても再開始しない', () => {
+      const { result } = renderHook(() => useVoiceStateMachine());
+
+      // 【根拠】IDLE → wakeword 開始。ウェイクワード検知で SPEAKING_READY に遷移し、
+      //        abortRecognition() が呼ばれる。その後 end イベントが発火するが、
+      //        state が IDLE でないため再開始しないことを確認する。
+      const wakewordOptions = getLastRecognitionOptions();
+      const callsBefore = mockStartRecognition.mock.calls.length;
+
+      act(() => {
+        simulateWakeword();
+      });
+      expect(result.current.state).toBe('SPEAKING_READY');
+
+      // 意図的 abort 後の end イベントをシミュレート
+      act(() => {
+        wakewordOptions.onEnd();
+      });
+
+      // 再開始されていないことを確認（SPEAKING_READY での startRecognition 呼び出しがないこと）
+      const callsAfterEnd = mockStartRecognition.mock.calls.length;
+      expect(callsAfterEnd).toBe(callsBefore);
+    });
   });
 
   // =================================================================

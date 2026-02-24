@@ -104,6 +104,18 @@ export function useVoiceStateMachine(): UseVoiceStateMachineReturn {
   const isSpeechEnabledRef = useRef(isSpeechEnabled);
   isSpeechEnabledRef.current = isSpeechEnabled;
 
+  // 【目的】isVoiceRecognitionEnabled を onEnd コールバック内で最新値を参照するための ref
+  // 【根拠】onEnd コールバックはクロージャで古い値をキャプチャするため、
+  //        ref 経由で最新の設定値を参照する必要がある。
+  const isVoiceRecognitionEnabledRef = useRef(isVoiceRecognitionEnabled);
+  isVoiceRecognitionEnabledRef.current = isVoiceRecognitionEnabled;
+
+  // 【目的】voiceState.state を onEnd コールバック内で最新値を参照するための ref
+  // 【根拠】意図的な abort（SPEAKING_READY 遷移時等）後の end イベントで
+  //        ローグセッションが再開始されるのを防ぐため。
+  const voiceStateRef = useRef(voiceState.state);
+  voiceStateRef.current = voiceState.state;
+
   // =================================================================
   // タイマーヘルパー
   // =================================================================
@@ -156,9 +168,17 @@ export function useVoiceStateMachine(): UseVoiceStateMachineReturn {
       },
       onEnd: () => {
         // 【根拠】continuous: true でもエラー等でセッションが終了する場合がある。
-        //        IDLE 状態かつ音声認識有効なら再開始する（稀なエラーリカバリ）
-        log('SM', 'wakeword session ended unexpectedly');
-        if (isMountedRef.current && isVoiceRecognitionEnabled) {
+        //        IDLE 状態かつ音声認識有効な場合のみ再開始する（エラーリカバリ）。
+        //        IDLE 以外（SPEAKING_READY 等）で end が来た場合は意図的な abort なので
+        //        再開始しない（ローグセッション防止）。
+        //        ref 経由で最新値を参照し、stale クロージャ問題を回避する。
+        log('SM', `wakeword session ended, state=${voiceStateRef.current}`);
+        if (
+          isMountedRef.current &&
+          isVoiceRecognitionEnabledRef.current &&
+          voiceStateRef.current === 'IDLE'
+        ) {
+          log('SM', 'restarting wakeword listening (error recovery)');
           startWakewordListening();
         }
       },
