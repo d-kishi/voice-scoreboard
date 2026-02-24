@@ -2,7 +2,7 @@ import './global.css';
 
 import { useKeepAwake } from 'expo-keep-awake';
 import { StatusBar } from 'expo-status-bar';
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Text, View } from 'react-native';
 
 import { ControlBar } from '@/features/score/components/ControlBar';
@@ -12,6 +12,13 @@ import { useGameEndWhistle } from '@/features/score/hooks/use-game-end-whistle';
 import { useScore } from '@/features/score/hooks/use-score';
 import { ListeningOverlay } from '@/features/voice/components/ListeningOverlay';
 import { useVoiceStateMachine } from '@/features/voice/hooks/use-voice-state-machine';
+import { log } from '@/utils/logger';
+
+// 【目的】モジュール読み込み時刻を記録し、初回レンダリングまでの経過時間を計測する
+// 【根拠】Requirement 9.1（3秒以内起動）の検証用。
+//        モジュールスコープで Date.now() を呼ぶことで、JS バンドルの評価開始時点を捕捉する。
+//        logcat で `[VSB:APP] startup:` をフィルタして起動時間を確認できる。
+const APP_START_TIME = Date.now();
 
 // 【目的】M4 デバッグ用: Release ビルドでクラッシュ原因を表示する ErrorBoundary
 // 【根拠】Release ビルドでは Red Box が無いため、エラー原因が不明になる
@@ -56,6 +63,19 @@ class ErrorBoundary extends React.Component<
 export default function App() {
   useKeepAwake();
   const { isGameEnd, reset } = useScore();
+
+  // 【目的】初回レンダリング時に起動時間を logcat に出力する
+  // 【根拠】Requirement 9.1（3秒以内起動）の検証用。
+  //        useRef で一度だけ実行を保証し、APP_START_TIME からの経過時間を計測する。
+  //        logcat で `grep "VSB:APP"` でフィルタして確認できる。
+  const startupLoggedRef = useRef(false);
+  useEffect(() => {
+    if (!startupLoggedRef.current) {
+      startupLoggedRef.current = true;
+      const elapsed = Date.now() - APP_START_TIME;
+      log('APP', `startup: ${elapsed}ms`);
+    }
+  }, []);
 
   // 【目的】試合終了時にホイッスル音を再生する
   // 【根拠】isGameEnd の false → true 遷移を検知してホイッスル音を再生する。
