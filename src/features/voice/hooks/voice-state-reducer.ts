@@ -47,7 +47,6 @@ export type VoiceAction =
   | { type: 'COUNTDOWN_TICK' }
   | { type: 'LISTENING_TIMEOUT' }
   | { type: 'SPEECH_ROGER_DONE' }
-  | { type: 'COMMAND_EXECUTED' }
   | { type: 'COMMAND_EXECUTED_WITH_SCORE' }
   | { type: 'SPEECH_SCORE_DONE' }
   | { type: 'STOP' };
@@ -117,12 +116,7 @@ export function voiceStateReducer(
       if (current.state !== 'SPEAKING_ROGER') return current;
       return { ...current, state: 'EXECUTING' };
 
-    // EXECUTING → IDLE: 得点加算後（スコア読み上げなし）
-    case 'COMMAND_EXECUTED':
-      if (current.state !== 'EXECUTING') return current;
-      return { ...INITIAL_VOICE_STATE };
-
-    // EXECUTING → SPEAKING_SCORE: ロールバック/リセット後
+    // EXECUTING → SPEAKING_SCORE: 全コマンド共通（得点加算・ロールバック・リセット）
     case 'COMMAND_EXECUTED_WITH_SCORE':
       if (current.state !== 'EXECUTING') return current;
       return { ...current, state: 'SPEAKING_SCORE', pendingCommand: null };

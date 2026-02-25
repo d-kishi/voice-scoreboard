@@ -175,8 +175,7 @@ stateDiagram-v2
     LISTENING --> SPEAKING_ROGER: コマンド検知
     LISTENING --> IDLE: 5秒タイムアウト
     SPEAKING_ROGER --> EXECUTING: Roger読み上げ完了
-    EXECUTING --> SPEAKING_SCORE: ロールバック or リセット実行
-    EXECUTING --> IDLE: 得点加算実行
+    EXECUTING --> SPEAKING_SCORE: コマンド実行（全コマンド共通）
     SPEAKING_SCORE --> IDLE: スコア読み上げ完了
 ```
 

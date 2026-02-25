@@ -66,7 +66,18 @@ AsyncStorage の設定データ等がリセットされる。
   - **prebuild --clean 後の復元**: CLAUDE.md の「`expo prebuild --clean` 後に必要な復元」セクションを必ず参照
 - JS/TS のみの変更 → prebuild 不要、Step 4 へ
 
-### Step 4: ビルド
+### Step 4: JS バンドルキャッシュのクリア（JS/TS 変更時は必須）
+
+JS/TS ソースコードを変更した場合、**ビルド前に Gradle の JS バンドルキャッシュを必ず削除する**。
+Gradle の `createBundleReleaseJsAndAssets` タスクは UP-TO-DATE 判定で古いバンドルを再利用することがあり、ソースコード変更が APK に反映されない。
+
+```bash
+rm -rf /mnt/c/Develop/voice-scoreboard/android/app/build/generated/assets/createBundleReleaseJsAndAssets/
+```
+
+ネイティブコード（Java/Kotlin/C++）のみの変更ではこの手順は不要。
+
+### Step 5: ビルド
 
 ターゲットに応じてアーキテクチャを指定する:
 
@@ -86,21 +97,23 @@ cd /mnt/c/Develop/voice-scoreboard/android && \
 
 **重要**: `expo run:android` は接続中デバイスのアーキテクチャを自動検出する。実機（arm64）とエミュレータ（x86_64）が同時接続の場合、arm64 が選択されてエミュレータで `libreactnative.so` が見つからずクラッシュする。エミュレータ向けには `ORG_GRADLE_PROJECT_reactNativeArchitectures=x86_64` で Gradle を直接実行すること。
 
-### Step 5: APK インストール
+### Step 6: APK インストール
 
 `expo run:android` の自動インストールは WSL パスで失敗するため、**Windows パス形式で手動インストール**する。
+インストール前に既存プロセスを強制停止する（古いプロセスが残っていると新しい APK のコードが反映されない）。
 
 ```bash
+adb.exe -s $DEVICE_SERIAL shell am force-stop com.voicescoreboard.app
 adb.exe -s $DEVICE_SERIAL install -r -d "C:\\Develop\\voice-scoreboard\\android\\app\\build\\outputs\\apk\\release\\app-release.apk"
 ```
 
-### Step 6: アプリ起動
+### Step 7: アプリ起動
 
 ```bash
 adb.exe -s $DEVICE_SERIAL shell am start -n com.voicescoreboard.app/.MainActivity
 ```
 
-### Step 7: logcat モニタリング（`--logcat` 時、または任意）
+### Step 8: logcat モニタリング（`--logcat` 時、または任意）
 
 **重要**: WSL2 では `adb.exe logcat` のパイプが正常に動作しないことがある。`adb.exe shell "logcat ..."` 形式を使用する。
 
@@ -115,7 +128,7 @@ adb.exe -s $DEVICE_SERIAL shell "logcat -s ReactNativeJS:V" &
 adb.exe -s $DEVICE_SERIAL shell "logcat -d" | grep ReactNativeJS
 ```
 
-### Step 8: 確認報告
+### Step 9: 確認報告
 
 ユーザーに以下を報告する:
 - ターゲットデバイス（実機 / エミュレータ）
@@ -124,7 +137,8 @@ adb.exe -s $DEVICE_SERIAL shell "logcat -d" | grep ReactNativeJS
 
 ## WSL2 固有の注意事項
 
-- **サンドボックス無効化必須**: Gradle ビルド（Step 4）は `~/.gradle/` への書き込みが必要。Bash ツールで `dangerouslyDisableSandbox: true` を指定すること。サンドボックス有効のままだと `gradle-*.zip.lck (Read-only file system)` エラーで失敗する
+- **サンドボックス無効化必須**: Gradle ビルド（Step 5）は `~/.gradle/` への書き込みが必要。Bash ツールで `dangerouslyDisableSandbox: true` を指定すること。サンドボックス有効のままだと `gradle-*.zip.lck (Read-only file system)` エラーで失敗する
+- **JS バンドルキャッシュ問題**: Gradle は JS バンドルの UP-TO-DATE 判定を誤ることがある。JS/TS を変更した場合は **Step 4 のキャッシュクリアを必ず実行すること**。これを怠るとソースコード変更がデバイスに反映されない（2026-02-25 に発生）
 - **パス変換**: APK インストール時は Windows パス（`C:\\...`）を使用。WSL パス（`/mnt/c/...`）は adb.exe が解釈できない
 - **logcat パイプ問題**: `adb.exe logcat -d | grep ...` は WSL2 で空結果になることがある。`adb.exe shell "logcat -d"` 形式で回避
 - **adb ラッパー**: `~/.local/bin/adb` は `adb.exe` へのラッパー。直接 `adb.exe` を呼んでも同じ

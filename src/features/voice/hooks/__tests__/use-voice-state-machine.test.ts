@@ -313,7 +313,8 @@ describe('useVoiceStateMachine', () => {
       expect(mockSpeakRoger).toHaveBeenCalled();
     });
 
-    it('Roger 完了で EXECUTING → incrementScore → IDLE', () => {
+    it('Roger 完了で EXECUTING → incrementScore → SPEAKING_SCORE → スコア読み上げ → IDLE', () => {
+      setupDefaultMocks({ leftScore: 0, rightScore: 1 });
       const { result } = renderHook(() => useVoiceStateMachine());
       advanceToListening(result);
 
@@ -325,10 +326,18 @@ describe('useVoiceStateMachine', () => {
       });
 
       expect(mockIncrementScore).toHaveBeenCalledWith('right');
+      expect(result.current.state).toBe('SPEAKING_SCORE');
+      expect(mockSpeakScore).toHaveBeenCalledWith(0, 1, expect.any(Function));
+
+      act(() => {
+        triggerSpeakScoreDone();
+      });
+
       expect(result.current.state).toBe('IDLE');
     });
 
-    it('「左」検知で incrementScore(left) が呼ばれる', () => {
+    it('「左」検知で incrementScore(left) → SPEAKING_SCORE → IDLE', () => {
+      setupDefaultMocks({ leftScore: 1, rightScore: 0 });
       const { result } = renderHook(() => useVoiceStateMachine());
       advanceToListening(result);
 
@@ -340,6 +349,13 @@ describe('useVoiceStateMachine', () => {
       });
 
       expect(mockIncrementScore).toHaveBeenCalledWith('left');
+      expect(result.current.state).toBe('SPEAKING_SCORE');
+
+      act(() => {
+        triggerSpeakScoreDone();
+      });
+
+      expect(result.current.state).toBe('IDLE');
     });
 
     it('interim result（isFinal=false）でもコマンドを検知する', () => {
@@ -355,7 +371,8 @@ describe('useVoiceStateMachine', () => {
       expect(result.current.state).toBe('SPEAKING_ROGER');
     });
 
-    it('得点加算時はスコア読み上げなし（SPEAKING_SCORE をスキップ）', () => {
+    it('得点加算時もスコア読み上げが行われる', () => {
+      setupDefaultMocks({ leftScore: 3, rightScore: 2 });
       const { result } = renderHook(() => useVoiceStateMachine());
       advanceToListening(result);
 
@@ -366,8 +383,8 @@ describe('useVoiceStateMachine', () => {
         triggerSpeakRogerDone();
       });
 
-      expect(mockSpeakScore).not.toHaveBeenCalled();
-      expect(result.current.state).toBe('IDLE');
+      expect(mockSpeakScore).toHaveBeenCalledWith(3, 2, expect.any(Function));
+      expect(result.current.state).toBe('SPEAKING_SCORE');
     });
   });
 
@@ -553,7 +570,7 @@ describe('useVoiceStateMachine', () => {
       expect(result.current.state).toBe('LISTENING');
     });
 
-    it('isSpeechEnabled=false の場合、SPEAKING_ROGER をスキップする', () => {
+    it('isSpeechEnabled=false の場合、SPEAKING_ROGER と SPEAKING_SCORE をスキップする', () => {
       setupDefaultMocks({ isSpeechEnabled: false });
       const { result } = renderHook(() => useVoiceStateMachine());
 
@@ -566,7 +583,8 @@ describe('useVoiceStateMachine', () => {
       });
 
       expect(mockSpeakRoger).not.toHaveBeenCalled();
-      // SPEAKING_ROGER → EXECUTING → IDLE まで即座に遷移
+      expect(mockSpeakScore).not.toHaveBeenCalled();
+      // SPEAKING_ROGER → EXECUTING → SPEAKING_SCORE → IDLE まで即座に遷移
       expect(mockIncrementScore).toHaveBeenCalledWith('right');
       expect(result.current.state).toBe('IDLE');
     });

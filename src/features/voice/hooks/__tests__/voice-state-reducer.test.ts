@@ -207,14 +207,14 @@ describe('voiceStateReducer', () => {
       countdown: 0,
     };
 
-    it('COMMAND_EXECUTED で IDLE に遷移する（得点加算時）', () => {
+    it('COMMAND_EXECUTED_WITH_SCORE で SPEAKING_SCORE に遷移する（得点加算時）', () => {
       const next = voiceStateReducer(executingState, {
-        type: 'COMMAND_EXECUTED',
+        type: 'COMMAND_EXECUTED_WITH_SCORE',
       });
-      expect(next).toEqual(INITIAL_VOICE_STATE);
+      expect(next.state).toBe('SPEAKING_SCORE');
     });
 
-    it('COMMAND_EXECUTED_WITH_SCORE で SPEAKING_SCORE に遷移する', () => {
+    it('COMMAND_EXECUTED_WITH_SCORE で SPEAKING_SCORE に遷移する（ロールバック時）', () => {
       const stateWithRollback: VoiceReducerState = {
         ...executingState,
         pendingCommand: 'rollback',

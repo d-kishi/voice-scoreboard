@@ -246,14 +246,14 @@ export function useVoiceStateMachine(): UseVoiceStateMachineReturn {
 
   /**
    * 【目的】pendingCommand に基づいてスコア操作を実行する
-   * 【根拠】right/left は得点加算のみ（COMMAND_EXECUTED → IDLE）。
-   *        rollback/reset はスコア読み上げが必要（COMMAND_EXECUTED_WITH_SCORE → SPEAKING_SCORE）。
+   * 【根拠】全コマンドで COMMAND_EXECUTED_WITH_SCORE を dispatch し、
+   *        SPEAKING_SCORE 状態でスコア読み上げを行う（Req 6.3 変更対応）。
    */
   function executeCommand(): void {
     const command = pendingCommandRef.current;
     if (!command) {
       warn('SM', 'executeCommand: no pendingCommand, returning to IDLE');
-      dispatch({ type: 'COMMAND_EXECUTED' });
+      dispatch({ type: 'COMMAND_EXECUTED_WITH_SCORE' });
       return;
     }
 
@@ -261,21 +261,18 @@ export function useVoiceStateMachine(): UseVoiceStateMachineReturn {
     switch (command) {
       case 'right':
         incrementScore('right');
-        dispatch({ type: 'COMMAND_EXECUTED' });
         break;
       case 'left':
         incrementScore('left');
-        dispatch({ type: 'COMMAND_EXECUTED' });
         break;
       case 'rollback':
         rollback();
-        dispatch({ type: 'COMMAND_EXECUTED_WITH_SCORE' });
         break;
       case 'reset':
         reset();
-        dispatch({ type: 'COMMAND_EXECUTED_WITH_SCORE' });
         break;
     }
+    dispatch({ type: 'COMMAND_EXECUTED_WITH_SCORE' });
   }
 
   // =================================================================

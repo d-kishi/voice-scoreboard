@@ -65,8 +65,7 @@
 #### Acceptance Criteria
 1. When ウェイクワードが検知された, the Voice Scoreboard shall 「Ready」と音声で読み上げる
 2. When 音声コマンドが検知された, the Voice Scoreboard shall 「Roger」と音声で読み上げる
-3. When ロールバックまたはリセットが音声コマンドで実行された, the Voice Scoreboard shall 「左{点数} 右{点数}」の形式で現在のスコアを読み上げる
-4. When 得点加算が音声コマンドで実行された, the Voice Scoreboard shall スコアの読み上げは行わず「Roger」のみ応答する
+3. When 音声コマンド（右/左/ロールバック/リセット）が実行された, the Voice Scoreboard shall 「左{点数} 右{点数}」の形式で現在のスコアを読み上げる
 5. When タッチ操作で得点が変更された, the Voice Scoreboard shall 音声読み上げは行わない
 6. When 試合終了が判定された, the Voice Scoreboard shall ホイッスル音を3秒間再生する
 

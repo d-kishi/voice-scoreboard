@@ -197,6 +197,13 @@
   - 音声認識がエミュレータで動作しない場合: UI 表示・タッチ操作・読み上げ・効果音の統合動作を確認し、音声認識 E2E は M6（実機）に委ねる
   - _Milestone: M5（音声UI統合 エミュレータ検証）_
 
+- [x] 6.1a 得点加算時のスコア読み上げ対応（仕様変更）
+  - 現行仕様（Req 6.4）を廃止し、全コマンドで「Roger」→ スコア操作 →「左x点 右y点」と読み上げるよう変更
+  - `voice-state-reducer.ts`: `COMMAND_EXECUTED` アクションを削除（デッドコード化）
+  - `use-voice-state-machine.ts`: right/left の dispatch を `COMMAND_EXECUTED` → `COMMAND_EXECUTED_WITH_SCORE` に変更
+  - テスト更新: 「得点加算時はスコア読み上げなし」→「得点加算時もスコア読み上げ」に反転
+  - _Requirements: 6.3_
+
 - [ ] 8. パフォーマンス最適化と最終検証
 - [x] 8.1 起動パフォーマンスとオフライン動作の検証
   - アプリ起動が3秒以内に完了することを検証
