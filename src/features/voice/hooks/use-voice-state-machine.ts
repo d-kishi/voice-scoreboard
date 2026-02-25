@@ -6,10 +6,13 @@
  *        サービス呼び出し（音声認識・読み上げ）を実行する。
  *
  *        なぜ useReducer + useEffect を採用するか:
- *        - 状態遷移が 6 つの状態を持つ複雑な有限オートマトンであり、
+ *        - 状態遷移が 5 つの状態を持つ有限オートマトンであり、
  *          useReducer の「現在の状態 + アクション -> 次の状態」が自然に適合する
  *        - reducer は純粋関数として単体テスト可能
  *        - 副作用を useEffect に分離することで責務が明確になる
+ *
+ *        Task 8.2: SPEAKING_READY 状態を廃止。WAKEWORD_DETECTED → 直接 LISTENING に遷移し、
+ *        speakReady() は fire-and-forget で呼び出す（完了を待たない）。
  */
 
 import { useReducer, useEffect, useRef, useCallback } from 'react';
@@ -57,8 +60,8 @@ export interface UseVoiceStateMachineReturn {
 
 /**
  * 【目的】K.I.T.T.スタイル音声状態マシンを提供するカスタム hook
- * 【根拠】IDLE → SPEAKING_READY → LISTENING → SPEAKING_ROGER → EXECUTING
- *        → SPEAKING_SCORE → IDLE の状態遷移を管理し、各状態で適切なサービスを呼び出す。
+ * 【根拠】IDLE → LISTENING → SPEAKING_ROGER → EXECUTING → SPEAKING_SCORE → IDLE
+ *        の 5 状態遷移を管理し、各状態で適切なサービスを呼び出す。
  *        音声認識と読み上げの排他制御を状態マシンレベルで保証する。
  */
 export function useVoiceStateMachine(): UseVoiceStateMachineReturn {
@@ -111,7 +114,7 @@ export function useVoiceStateMachine(): UseVoiceStateMachineReturn {
   isVoiceRecognitionEnabledRef.current = isVoiceRecognitionEnabled;
 
   // 【目的】voiceState.state を onEnd コールバック内で最新値を参照するための ref
-  // 【根拠】意図的な abort（SPEAKING_READY 遷移時等）後の end イベントで
+  // 【根拠】意図的な abort（LISTENING 遷移時等）後の end イベントで
   //        ローグセッションが再開始されるのを防ぐため。
   const voiceStateRef = useRef(voiceState.state);
   voiceStateRef.current = voiceState.state;
@@ -148,7 +151,7 @@ export function useVoiceStateMachine(): UseVoiceStateMachineReturn {
   /**
    * 【目的】ウェイクワード認識（wakeword モード）を開始する
    * 【根拠】IDLE 状態で常時リスニングし、「スコア」を検知したら
-   *        WAKEWORD_DETECTED を dispatch して SPEAKING_READY に遷移する。
+   *        WAKEWORD_DETECTED を dispatch して LISTENING に直接遷移する。
    *        isFinal のみでウェイクワード検知とする理由:
    *        interim result で「スコア」が検知されても、最終結果で別の単語に
    *        確定する可能性があるため。
@@ -169,7 +172,7 @@ export function useVoiceStateMachine(): UseVoiceStateMachineReturn {
       onEnd: () => {
         // 【根拠】continuous: true でもエラー等でセッションが終了する場合がある。
         //        IDLE 状態かつ音声認識有効な場合のみ再開始する（エラーリカバリ）。
-        //        IDLE 以外（SPEAKING_READY 等）で end が来た場合は意図的な abort なので
+        //        IDLE 以外（LISTENING 等）で end が来た場合は意図的な abort なので
         //        再開始しない（ローグセッション防止）。
         //        ref 経由で最新値を参照し、stale クロージャ問題を回避する。
         log('SM', `wakeword session ended, state=${voiceStateRef.current}`);
@@ -211,8 +214,13 @@ export function useVoiceStateMachine(): UseVoiceStateMachineReturn {
         }
       },
       onEnd: () => {
-        // 【根拠】command モードの end は認識エンジンの自然終了。
-        //        タイムアウトタイマーが別途管理しているため、ここでは何もしない。
+        // 【根拠】Task 8.2: TTS "Ready" が Audio Focus を奪って command セッションが
+        //        終了する場合がある。LISTENING 状態なら再開始する（リカバリ）。
+        //        SPEAKING_ROGER 等に遷移済みなら意図的な終了なので再開始しない。
+        if (isMountedRef.current && voiceStateRef.current === 'LISTENING') {
+          log('SM', 'command session ended during LISTENING, restarting (audio focus recovery)');
+          startCommandListening();
+        }
       },
       onError: (err: string) => {
         warn('SM', `command recognition error: ${err}`);
@@ -296,27 +304,18 @@ export function useVoiceStateMachine(): UseVoiceStateMachineReturn {
         }
         break;
 
-      case 'SPEAKING_READY':
-        // 【目的】認識を停止し、Ready を読み上げ
-        log('SM', `entering SPEAKING_READY, speech=${isSpeechEnabledRef.current}`);
-        abortRecognition();
-        if (isSpeechEnabledRef.current) {
-          speakReady(() => {
-            if (isMountedRef.current) {
-              dispatch({ type: 'SPEECH_READY_DONE' });
-            }
-          });
-        } else {
-          // 【根拠】読み上げ OFF 時は即座に次の状態へ遷移
-          dispatch({ type: 'SPEECH_READY_DONE' });
-        }
-        break;
-
       case 'LISTENING':
-        // 【目的】コマンド認識を開始 + カウントダウンタイマー開始
-        log('SM', 'entering LISTENING, starting command + countdown');
+        // 【目的】wakeword セッション停止 + コマンド認識開始 + カウントダウン + Ready TTS fire-and-forget
+        // 【根拠】Task 8.2: SPEAKING_READY を廃止し、WAKEWORD_DETECTED → 直接 LISTENING に遷移。
+        //        Ready TTS は isSpeechEnabled に関係なく常に再生する（Req 8.4）。
+        //        完了を待たずにコマンド認識を即時開始する（fire-and-forget）。
+        log('SM', 'entering LISTENING, aborting wakeword + starting command + countdown + ready TTS');
+        abortRecognition();
         startCommandListening();
         startCountdownTimer();
+        speakReady(() => {
+          log('SM', 'Ready TTS finished (fire-and-forget)');
+        });
         break;
 
       case 'SPEAKING_ROGER':

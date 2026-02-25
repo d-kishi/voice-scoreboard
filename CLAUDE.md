@@ -254,7 +254,15 @@ if (!j['0.7.x']['react-native'].includes('0.76')) {
 ### release ビルドコマンド
 
 ```bash
-CMAKE_VERSION=3.28.3 bunx expo run:android --variant release
+# 実機向け（arm64-v8a）
+cd android && CMAKE_VERSION=3.28.3 ./gradlew app:assembleRelease \
+  -PreactNativeArchitectures=arm64-v8a \
+  -x lint -x test --configure-on-demand --build-cache
+
+# エミュレータ向け（x86_64）
+cd android && CMAKE_VERSION=3.28.3 ./gradlew app:assembleRelease \
+  -PreactNativeArchitectures=x86_64 \
+  -x lint -x test --configure-on-demand --build-cache
 ```
 
 `CMAKE_VERSION` 環境変数は、ネイティブ Linux cmake（3.28.3）と build.gradle が期待するバージョン（3.22.1）の不一致を解消するために必要。

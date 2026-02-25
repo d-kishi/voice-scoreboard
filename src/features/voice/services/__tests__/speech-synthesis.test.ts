@@ -39,8 +39,8 @@ describe('SpeechSynthesisService', () => {
         'テスト',
         expect.objectContaining({
           language: 'ja-JP',
-          pitch: 0.8,
-          rate: 1.0,
+          pitch: 0.6,
+          rate: 1.3,
         })
       );
     });
@@ -116,8 +116,8 @@ describe('SpeechSynthesisService', () => {
         'Ready',
         expect.objectContaining({
           language: 'ja-JP',
-          pitch: 0.8,
-          rate: 1.0,
+          pitch: 0.6,
+          rate: 1.3,
         })
       );
     });
@@ -140,8 +140,8 @@ describe('SpeechSynthesisService', () => {
         'ラージャ',
         expect.objectContaining({
           language: 'ja-JP',
-          pitch: 0.8,
-          rate: 1.0,
+          pitch: 0.6,
+          rate: 1.3,
         })
       );
     });
@@ -164,8 +164,8 @@ describe('SpeechSynthesisService', () => {
         'ひだり15、みぎ20',
         expect.objectContaining({
           language: 'ja-JP',
-          pitch: 0.8,
-          rate: 1.0,
+          pitch: 0.6,
+          rate: 1.3,
         })
       );
     });
@@ -178,8 +178,8 @@ describe('SpeechSynthesisService', () => {
         'ひだり0、みぎ0',
         expect.objectContaining({
           language: 'ja-JP',
-          pitch: 0.8,
-          rate: 1.0,
+          pitch: 0.6,
+          rate: 1.3,
         })
       );
     });

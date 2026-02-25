@@ -170,7 +170,7 @@ graph TB
 stateDiagram-v2
     [*] --> IDLE
 
-    IDLE --> LISTENING: ウェイクワード検知（+ Ready効果音 fire-and-forget）
+    IDLE --> LISTENING: ウェイクワード検知（+ Ready TTS fire-and-forget）
     LISTENING --> SPEAKING_ROGER: コマンド検知
     LISTENING --> IDLE: 5秒タイムアウト
     SPEAKING_ROGER --> EXECUTING: Roger読み上げ完了
@@ -181,8 +181,8 @@ stateDiagram-v2
 **Key Decisions**:
 - SPEAKING_ROGER / SPEAKING_SCORE 状態で音声認識と読み上げの排他制御を状態マシンで保証する
 - 読み上げ中は音声認識を停止し、完了コールバックで次の状態に遷移
-- ウェイクワード検知時は SPEAKING_READY 状態を経由せず、即座に LISTENING に遷移する。Ready 応答は TTS ではなく事前録音の効果音（expo-av）を fire-and-forget で再生し、コマンド認識の開始をブロックしない。これにより、ウェイクワード検知からコマンド受付開始までの遅延を約1秒から約200msに短縮する
-- Android では SpeechRecognizer と TextToSpeech が Audio Focus を競合するため同時実行不可。Ready を効果音（expo-av の MediaPlayer）に変更することでこの制約を回避する
+- ウェイクワード検知時は SPEAKING_READY 状態を経由せず、即座に LISTENING に遷移する。Ready TTS（speakReady()）を fire-and-forget で再生し、コマンド認識の開始をブロックしない。これにより、ウェイクワード検知からコマンド受付開始までの遅延を約1秒から即時に短縮する
+- Android では SpeechRecognizer と TextToSpeech が Audio Focus を競合するため、TTS が認識セッションを中断する可能性がある。command モードの onEnd でリカバリ（LISTENING 中なら再開始）することでこの制約に対処する
 
 ### 得点操作フロー（タッチ）
 
@@ -232,7 +232,7 @@ sequenceDiagram
 | 4.5 | 5秒タイムアウトでIDLE復帰 | useVoiceStateMachine | VoiceState | 音声コマンド状態マシン |
 | 5.1-5.4 | 音声コマンドでスコア操作 | useVoiceStateMachine, useScore | VoiceCommand | 音声コマンド状態マシン |
 | 5.5 | コマンド実行後IDLE復帰 | useVoiceStateMachine | VoiceState | 音声コマンド状態マシン |
-| 6.1 | Ready効果音再生 | SoundService | SoundService | 音声コマンド状態マシン |
+| 6.1 | Ready TTS fire-and-forget | SpeechSynthesisService | SpeechSynthesisService | 音声コマンド状態マシン |
 | 6.2 | Roger読み上げ | SpeechSynthesisService | SpeechSynthesisService | 音声コマンド状態マシン |
 | 6.3-6.5 | スコア読み上げルール | useVoiceStateMachine, SpeechSynthesisService | - | 音声コマンド状態マシン |
 | 6.6 | ホイッスル音 | SoundService | SoundService | - |
@@ -422,7 +422,7 @@ interface SpeechRecognitionService {
 | Field | Detail |
 |-------|--------|
 | Intent | expo-speech による音声読み上げ |
-| Requirements | 6.2-6.4 |
+| Requirements | 6.1, 6.2-6.4 |
 
 **Responsibilities & Constraints**
 - テキストの音声読み上げ
@@ -449,12 +449,11 @@ interface SpeechSynthesisService {
 
 | Field | Detail |
 |-------|--------|
-| Intent | expo-av による効果音再生（Ready音・ホイッスル音） |
-| Requirements | 6.1, 6.6 |
+| Intent | expo-av による効果音再生（ホイッスル音） |
+| Requirements | 6.6 |
 
 **Responsibilities & Constraints**
-- ローカルアセットからの音声ファイル再生（Ready効果音・ホイッスル音）
-- Ready効果音: ウェイクワード検知時に fire-and-forget で再生（完了を待たない）
+- ローカルアセットからの音声ファイル再生（ホイッスル音）
 - ホイッスル音: 試合終了時に maxDurationMs で再生時間を制御
 - 再生完了後のリソース解放
 
@@ -465,7 +464,7 @@ interface SpeechSynthesisService {
 
 ##### Service Interface
 ```typescript
-type SoundType = 'whistle' | 'ready';
+type SoundType = 'whistle';
 
 interface SoundService {
   play(type: SoundType, maxDurationMs?: number): Promise<void>;
@@ -483,7 +482,7 @@ interface SoundService {
 **Responsibilities & Constraints**
 - IDLE→LISTENING→SPEAKING_ROGER→EXECUTING→SPEAKING_SCORE→IDLE の状態管理（5状態）
 - 音声認識と読み上げの排他制御（SPEAKING_ROGER / SPEAKING_SCORE 中は認識停止）
-- ウェイクワード検知時の Ready 効果音再生（SoundService 経由、fire-and-forget）
+- ウェイクワード検知時の Ready TTS 再生（SpeechSynthesisService 経由、fire-and-forget）
 - 5秒タイムアウトの管理
 - ウェイクワード「スコア」とコマンド語彙の判定
 - 設定（音声認識ON/OFF、読み上げON/OFF）の反映

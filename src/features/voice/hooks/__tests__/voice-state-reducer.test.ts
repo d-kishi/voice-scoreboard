@@ -2,6 +2,9 @@
  * 【目的】voiceStateReducer のユニットテスト
  * 【根拠】TDD の RED フェーズとして、状態マシンの遷移ルールを先にテストで定義する。
  *        reducer は純粋関数のため renderHook 不要。直接関数呼び出しでテストする。
+ *
+ *        Task 8.2: SPEAKING_READY 状態を廃止し、WAKEWORD_DETECTED → LISTENING 直接遷移に変更。
+ *        5状態（IDLE → LISTENING → SPEAKING_ROGER → EXECUTING → SPEAKING_SCORE）で動作する。
  */
 
 import {
@@ -18,9 +21,14 @@ describe('voiceStateReducer', () => {
   describe('IDLE 状態', () => {
     const idleState: VoiceReducerState = { ...INITIAL_VOICE_STATE };
 
-    it('WAKEWORD_DETECTED で SPEAKING_READY に遷移する', () => {
+    it('WAKEWORD_DETECTED で LISTENING に直接遷移する', () => {
       const next = voiceStateReducer(idleState, { type: 'WAKEWORD_DETECTED' });
-      expect(next.state).toBe('SPEAKING_READY');
+      expect(next.state).toBe('LISTENING');
+    });
+
+    it('WAKEWORD_DETECTED で countdown が LISTENING_DURATION に設定される', () => {
+      const next = voiceStateReducer(idleState, { type: 'WAKEWORD_DETECTED' });
+      expect(next.countdown).toBe(LISTENING_DURATION);
     });
 
     it('COMMAND_DETECTED を無視する（IDLE では受け付けない）', () => {
@@ -43,51 +51,6 @@ describe('voiceStateReducer', () => {
       expect(next.state).toBe('IDLE');
       expect(next.pendingCommand).toBeNull();
       expect(next.countdown).toBe(0);
-    });
-  });
-
-  // =================================================================
-  // SPEAKING_READY 状態
-  // =================================================================
-  describe('SPEAKING_READY 状態', () => {
-    const speakingReadyState: VoiceReducerState = {
-      state: 'SPEAKING_READY',
-      pendingCommand: null,
-      countdown: 0,
-    };
-
-    it('SPEECH_READY_DONE で LISTENING に遷移する', () => {
-      const next = voiceStateReducer(speakingReadyState, {
-        type: 'SPEECH_READY_DONE',
-      });
-      expect(next.state).toBe('LISTENING');
-    });
-
-    it('LISTENING 遷移時に countdown が LISTENING_DURATION に設定される', () => {
-      const next = voiceStateReducer(speakingReadyState, {
-        type: 'SPEECH_READY_DONE',
-      });
-      expect(next.countdown).toBe(LISTENING_DURATION);
-    });
-
-    it('WAKEWORD_DETECTED を無視する', () => {
-      const next = voiceStateReducer(speakingReadyState, {
-        type: 'WAKEWORD_DETECTED',
-      });
-      expect(next.state).toBe('SPEAKING_READY');
-    });
-
-    it('COMMAND_DETECTED を無視する', () => {
-      const next = voiceStateReducer(speakingReadyState, {
-        type: 'COMMAND_DETECTED',
-        command: 'right',
-      });
-      expect(next.state).toBe('SPEAKING_READY');
-    });
-
-    it('STOP で IDLE に遷移する', () => {
-      const next = voiceStateReducer(speakingReadyState, { type: 'STOP' });
-      expect(next).toEqual(INITIAL_VOICE_STATE);
     });
   });
 
@@ -281,7 +244,6 @@ describe('voiceStateReducer', () => {
   describe('STOP アクション', () => {
     const allStates: VoiceReducerState[] = [
       { state: 'IDLE', pendingCommand: null, countdown: 0 },
-      { state: 'SPEAKING_READY', pendingCommand: null, countdown: 0 },
       { state: 'LISTENING', pendingCommand: null, countdown: LISTENING_DURATION },
       { state: 'SPEAKING_ROGER', pendingCommand: 'right', countdown: 0 },
       { state: 'EXECUTING', pendingCommand: 'left', countdown: 0 },

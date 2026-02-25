@@ -20,11 +20,11 @@ import type { VoiceCommand } from '../types/voice-types';
  *        countdown（LISTENING 状態の残り秒数）を保持する。
  *        認識されたコマンドを SPEAKING_ROGER 状態を経由して
  *        EXECUTING に引き渡すために pendingCommand が必要。
+ *        Task 8.2: SPEAKING_READY を廃止し 5 状態で動作する。
  */
 export interface VoiceReducerState {
   readonly state:
     | 'IDLE'
-    | 'SPEAKING_READY'
     | 'LISTENING'
     | 'SPEAKING_ROGER'
     | 'EXECUTING'
@@ -37,12 +37,12 @@ export interface VoiceReducerState {
  * 【目的】状態マシンに送信できるアクションの型
  * 【根拠】各アクションが 1 つの状態遷移トリガーに対応する。
  *        SKIP 系アクションは設けない — 読み上げ OFF 時のスキップは
- *        hook 側の useEffect で通常のアクション（例: SPEECH_READY_DONE）を
+ *        hook 側の useEffect で通常のアクション（例: SPEECH_ROGER_DONE）を
  *        即座に dispatch することで実現する。
+ *        Task 8.2: SPEECH_READY_DONE を廃止（WAKEWORD_DETECTED → LISTENING 直接遷移）。
  */
 export type VoiceAction =
   | { type: 'WAKEWORD_DETECTED' }
-  | { type: 'SPEECH_READY_DONE' }
   | { type: 'COMMAND_DETECTED'; command: VoiceCommand }
   | { type: 'COUNTDOWN_TICK' }
   | { type: 'LISTENING_TIMEOUT' }
@@ -81,14 +81,9 @@ export function voiceStateReducer(
   action: VoiceAction
 ): VoiceReducerState {
   switch (action.type) {
-    // IDLE → SPEAKING_READY: ウェイクワード検知
+    // IDLE → LISTENING: ウェイクワード検知（Task 8.2: 直接遷移）
     case 'WAKEWORD_DETECTED':
       if (current.state !== 'IDLE') return current;
-      return { ...current, state: 'SPEAKING_READY' };
-
-    // SPEAKING_READY → LISTENING: Ready 読み上げ完了
-    case 'SPEECH_READY_DONE':
-      if (current.state !== 'SPEAKING_READY') return current;
       return { ...current, state: 'LISTENING', countdown: LISTENING_DURATION };
 
     // LISTENING → SPEAKING_ROGER: コマンド検知

@@ -3,7 +3,11 @@
  * 【根拠】TDD の RED フェーズとして、状態マシンと外部サービスの統合動作を
  *        先にテストで定義する。renderHook + act でhookをテストし、
  *        サービスは jest.mock() でモック化する。
- *        既存モック（expo-speech-recognition, expo-speech）のテストヘルパーを活用する。
+ *
+ *        Task 8.2: SPEAKING_READY 状態を廃止。
+ *        WAKEWORD_DETECTED → 直接 LISTENING に遷移し、
+ *        speakReady() を fire-and-forget で呼び出す（完了を待たない）。
+ *        command モードの onEnd でリカバリ（LISTENING 中なら再開始）。
  */
 
 import { renderHook, act } from '@testing-library/react-native';
@@ -104,11 +108,24 @@ function getLastRecognitionOptions(): SpeechRecognitionOptions {
 }
 
 /**
+ * 【目的】指定モードの最後の startRecognition options を取得する
+ */
+function getLastRecognitionOptionsByMode(mode: 'wakeword' | 'command'): SpeechRecognitionOptions {
+  const calls = mockStartRecognition.mock.calls;
+  for (let i = calls.length - 1; i >= 0; i--) {
+    if (calls[i][0].mode === mode) {
+      return calls[i][0];
+    }
+  }
+  throw new Error(`No startRecognition call with mode=${mode} found`);
+}
+
+/**
  * 【目的】ウェイクワード検知をシミュレートする
  *        startRecognition に渡された onResult を呼び出す
  */
 function simulateWakeword(): void {
-  const options = getLastRecognitionOptions();
+  const options = getLastRecognitionOptionsByMode('wakeword');
   options.onResult('スコア', true);
 }
 
@@ -116,17 +133,8 @@ function simulateWakeword(): void {
  * 【目的】コマンド認識結果をシミュレートする
  */
 function simulateCommand(transcript: string): void {
-  const options = getLastRecognitionOptions();
+  const options = getLastRecognitionOptionsByMode('command');
   options.onResult(transcript, true);
-}
-
-/**
- * 【目的】speakReady の onDone コールバックをトリガーする
- */
-function triggerSpeakReadyDone(): void {
-  const calls = mockSpeakReady.mock.calls;
-  const lastCall = calls[calls.length - 1];
-  lastCall[0](); // onDone callback
 }
 
 /**
@@ -145,6 +153,19 @@ function triggerSpeakScoreDone(): void {
   const calls = mockSpeakScore.mock.calls;
   const lastCall = calls[calls.length - 1];
   lastCall[2](); // onDone callback (3rd argument)
+}
+
+/**
+ * 【目的】IDLE → LISTENING まで遷移させるヘルパー
+ * 【根拠】Task 8.2 で SPEAKING_READY を廃止したため、wakeword 検知で直接 LISTENING に遷移する。
+ */
+function advanceToListening(
+  result: { current: ReturnType<typeof useVoiceStateMachine> }
+): void {
+  act(() => {
+    simulateWakeword();
+  });
+  expect(result.current.state).toBe('LISTENING');
 }
 
 // =================================================================
@@ -185,47 +206,14 @@ describe('useVoiceStateMachine', () => {
   });
 
   // =================================================================
-  // ウェイクワード検知フロー
+  // ウェイクワード検知フロー（Task 8.2: SPEAKING_READY 廃止）
   // =================================================================
   describe('ウェイクワード検知フロー', () => {
-    it('ウェイクワード検知で SPEAKING_READY に遷移する', () => {
+    it('ウェイクワード検知で直接 LISTENING に遷移する', () => {
       const { result } = renderHook(() => useVoiceStateMachine());
 
       act(() => {
         simulateWakeword();
-      });
-
-      expect(result.current.state).toBe('SPEAKING_READY');
-    });
-
-    it('SPEAKING_READY で abortRecognition が呼ばれる', () => {
-      const { result } = renderHook(() => useVoiceStateMachine());
-
-      act(() => {
-        simulateWakeword();
-      });
-
-      expect(mockAbortRecognition).toHaveBeenCalled();
-    });
-
-    it('SPEAKING_READY で speakReady が呼ばれる', () => {
-      renderHook(() => useVoiceStateMachine());
-
-      act(() => {
-        simulateWakeword();
-      });
-
-      expect(mockSpeakReady).toHaveBeenCalled();
-    });
-
-    it('Ready 読み上げ完了で LISTENING に遷移する', () => {
-      const { result } = renderHook(() => useVoiceStateMachine());
-
-      act(() => {
-        simulateWakeword();
-      });
-      act(() => {
-        triggerSpeakReadyDone();
       });
 
       expect(result.current.state).toBe('LISTENING');
@@ -237,26 +225,57 @@ describe('useVoiceStateMachine', () => {
       act(() => {
         simulateWakeword();
       });
-      act(() => {
-        triggerSpeakReadyDone();
-      });
 
       expect(result.current.countdown).toBe(LISTENING_DURATION);
     });
 
-    it('LISTENING 状態で command モードの認識が開始される', () => {
+    it('LISTENING 進入時に speakReady が fire-and-forget で呼ばれる', () => {
       renderHook(() => useVoiceStateMachine());
 
       act(() => {
         simulateWakeword();
       });
+
+      expect(mockSpeakReady).toHaveBeenCalled();
+    });
+
+    it('LISTENING 進入時に command モードの認識が開始される', () => {
+      renderHook(() => useVoiceStateMachine());
+
       act(() => {
-        triggerSpeakReadyDone();
+        simulateWakeword();
       });
 
       expect(mockStartRecognition).toHaveBeenCalledWith(
         expect.objectContaining({ mode: 'command' })
       );
+    });
+
+    it('speakReady の完了を待たずに command 認識が開始される', () => {
+      renderHook(() => useVoiceStateMachine());
+
+      act(() => {
+        simulateWakeword();
+      });
+
+      // 【根拠】speakReady の onDone をトリガーしていないが、
+      //        command モードの startRecognition は既に呼ばれている
+      const commandCalls = mockStartRecognition.mock.calls.filter(
+        (call) => call[0].mode === 'command'
+      );
+      expect(commandCalls.length).toBeGreaterThan(0);
+    });
+
+    it('isSpeechEnabled=false でも speakReady が呼ばれる（Req 8.4）', () => {
+      setupDefaultMocks({ isSpeechEnabled: false });
+      renderHook(() => useVoiceStateMachine());
+
+      act(() => {
+        simulateWakeword();
+      });
+
+      // 【根拠】Ready TTS は isSpeechEnabled に関係なく常に再生する（Req 8.4 変更）
+      expect(mockSpeakReady).toHaveBeenCalled();
     });
   });
 
@@ -264,21 +283,6 @@ describe('useVoiceStateMachine', () => {
   // コマンド実行フロー（得点加算）
   // =================================================================
   describe('コマンド実行フロー（得点加算）', () => {
-    /**
-     * 【目的】IDLE → SPEAKING_READY → LISTENING まで遷移させるヘルパー
-     */
-    function advanceToListening(
-      result: { current: ReturnType<typeof useVoiceStateMachine> }
-    ): void {
-      act(() => {
-        simulateWakeword();
-      });
-      act(() => {
-        triggerSpeakReadyDone();
-      });
-      expect(result.current.state).toBe('LISTENING');
-    }
-
     it('「右」検知で SPEAKING_ROGER に遷移する', () => {
       const { result } = renderHook(() => useVoiceStateMachine());
       advanceToListening(result);
@@ -364,7 +368,7 @@ describe('useVoiceStateMachine', () => {
 
       // interim result でコマンド検知
       act(() => {
-        const options = getLastRecognitionOptions();
+        const options = getLastRecognitionOptionsByMode('command');
         options.onResult('右', false); // isFinal=false
       });
 
@@ -392,17 +396,6 @@ describe('useVoiceStateMachine', () => {
   // コマンド実行フロー（ロールバック/リセット）
   // =================================================================
   describe('コマンド実行フロー（ロールバック/リセット）', () => {
-    function advanceToListening(
-      result: { current: ReturnType<typeof useVoiceStateMachine> }
-    ): void {
-      act(() => {
-        simulateWakeword();
-      });
-      act(() => {
-        triggerSpeakReadyDone();
-      });
-    }
-
     it('「ロールバック」→ rollback() → SPEAKING_SCORE → スコア読み上げ → IDLE', () => {
       setupDefaultMocks({ leftScore: 10, rightScore: 5 });
       const { result } = renderHook(() => useVoiceStateMachine());
@@ -453,17 +446,6 @@ describe('useVoiceStateMachine', () => {
   // タイムアウト
   // =================================================================
   describe('タイムアウト', () => {
-    function advanceToListening(
-      result: { current: ReturnType<typeof useVoiceStateMachine> }
-    ): void {
-      act(() => {
-        simulateWakeword();
-      });
-      act(() => {
-        triggerSpeakReadyDone();
-      });
-    }
-
     it('カウントダウンが毎秒デクリメントされる', () => {
       const { result } = renderHook(() => useVoiceStateMachine());
       advanceToListening(result);
@@ -516,8 +498,9 @@ describe('useVoiceStateMachine', () => {
   // 排他制御
   // =================================================================
   describe('排他制御', () => {
-    it('SPEAKING_READY 中は abortRecognition が呼ばれる', () => {
+    it('LISTENING 進入時に abortRecognition が呼ばれる（wakeword セッション停止）', () => {
       renderHook(() => useVoiceStateMachine());
+      mockAbortRecognition.mockClear();
 
       act(() => {
         simulateWakeword();
@@ -528,13 +511,7 @@ describe('useVoiceStateMachine', () => {
 
     it('SPEAKING_ROGER 中は abortRecognition が呼ばれる', () => {
       const { result } = renderHook(() => useVoiceStateMachine());
-
-      act(() => {
-        simulateWakeword();
-      });
-      act(() => {
-        triggerSpeakReadyDone();
-      });
+      advanceToListening(result);
       mockAbortRecognition.mockClear();
 
       act(() => {
@@ -556,7 +533,7 @@ describe('useVoiceStateMachine', () => {
       expect(mockStartRecognition).not.toHaveBeenCalled();
     });
 
-    it('isSpeechEnabled=false の場合、SPEAKING_READY をスキップする', () => {
+    it('isSpeechEnabled=false でも LISTENING に遷移し speakReady が呼ばれる（Req 8.4）', () => {
       setupDefaultMocks({ isSpeechEnabled: false });
       const { result } = renderHook(() => useVoiceStateMachine());
 
@@ -564,9 +541,8 @@ describe('useVoiceStateMachine', () => {
         simulateWakeword();
       });
 
-      // 【根拠】読み上げ OFF 時は speakReady を呼ばず、
-      //        即座に SPEECH_READY_DONE が dispatch されて LISTENING に遷移する
-      expect(mockSpeakReady).not.toHaveBeenCalled();
+      // 【根拠】Ready TTS は isSpeechEnabled に関係なく常に再生（Req 8.4）
+      expect(mockSpeakReady).toHaveBeenCalled();
       expect(result.current.state).toBe('LISTENING');
     });
 
@@ -612,13 +588,7 @@ describe('useVoiceStateMachine', () => {
   describe('stop()', () => {
     it('LISTENING 状態から IDLE に戻る', () => {
       const { result } = renderHook(() => useVoiceStateMachine());
-
-      act(() => {
-        simulateWakeword();
-      });
-      act(() => {
-        triggerSpeakReadyDone();
-      });
+      advanceToListening(result);
       expect(result.current.state).toBe('LISTENING');
 
       act(() => {
@@ -657,13 +627,10 @@ describe('useVoiceStateMachine', () => {
     it('IDLE 状態で wakeword セッションが終了すると再開始される', () => {
       renderHook(() => useVoiceStateMachine());
 
-      // 【根拠】初回レンダリング時に state 効果 + settings 効果の両方で startRecognition が呼ばれる。
-      //        continuous: true でもエラー等でセッションが終了する場合がある。
-      //        onEnd が呼ばれたら、追加で startRecognition が呼ばれることを確認。
       const callsBefore = mockStartRecognition.mock.calls.length;
 
       act(() => {
-        const options = getLastRecognitionOptions();
+        const options = getLastRecognitionOptionsByMode('wakeword');
         options.onEnd();
       });
 
@@ -677,32 +644,85 @@ describe('useVoiceStateMachine', () => {
       setupDefaultMocks({ isVoiceRecognitionEnabled: false });
       renderHook(() => useVoiceStateMachine());
 
-      // 【根拠】音声認識が無効の場合は startRecognition 自体が呼ばれていない
       expect(mockStartRecognition).not.toHaveBeenCalled();
     });
 
-    it('SPEAKING_READY 状態で wakeword セッションが終了しても再開始しない', () => {
+    it('LISTENING 状態で wakeword セッションが終了しても再開始しない', () => {
       const { result } = renderHook(() => useVoiceStateMachine());
 
-      // 【根拠】IDLE → wakeword 開始。ウェイクワード検知で SPEAKING_READY に遷移し、
-      //        abortRecognition() が呼ばれる。その後 end イベントが発火するが、
-      //        state が IDLE でないため再開始しないことを確認する。
-      const wakewordOptions = getLastRecognitionOptions();
+      const wakewordOptions = getLastRecognitionOptionsByMode('wakeword');
       const callsBefore = mockStartRecognition.mock.calls.length;
 
       act(() => {
         simulateWakeword();
       });
-      expect(result.current.state).toBe('SPEAKING_READY');
+      expect(result.current.state).toBe('LISTENING');
 
       // 意図的 abort 後の end イベントをシミュレート
       act(() => {
         wakewordOptions.onEnd();
       });
 
-      // 再開始されていないことを確認（SPEAKING_READY での startRecognition 呼び出しがないこと）
-      const callsAfterEnd = mockStartRecognition.mock.calls.length;
-      expect(callsAfterEnd).toBe(callsBefore);
+      // 再開始されていないことを確認
+      const wakewordCallsAfter = mockStartRecognition.mock.calls.filter(
+        (call) => call[0].mode === 'wakeword'
+      );
+      const wakewordCallsBefore = mockStartRecognition.mock.calls
+        .slice(0, callsBefore)
+        .filter((call) => call[0].mode === 'wakeword');
+      expect(wakewordCallsAfter.length).toBe(wakewordCallsBefore.length);
+    });
+  });
+
+  // =================================================================
+  // command セッション終了時のリカバリ（Task 8.2 新規）
+  // =================================================================
+  describe('command セッション終了時のリカバリ', () => {
+    it('LISTENING 中に command セッションが終了すると再開始される', () => {
+      const { result } = renderHook(() => useVoiceStateMachine());
+      advanceToListening(result);
+
+      const commandCallsBefore = mockStartRecognition.mock.calls.filter(
+        (call) => call[0].mode === 'command'
+      ).length;
+
+      // 【根拠】TTS "Ready" が Audio Focus を奪って command セッションが終了するケースのリカバリ
+      act(() => {
+        const commandOptions = getLastRecognitionOptionsByMode('command');
+        commandOptions.onEnd();
+      });
+
+      const commandCallsAfter = mockStartRecognition.mock.calls.filter(
+        (call) => call[0].mode === 'command'
+      ).length;
+      expect(commandCallsAfter).toBe(commandCallsBefore + 1);
+      expect(result.current.state).toBe('LISTENING');
+    });
+
+    it('SPEAKING_ROGER 中に command セッションが終了しても再開始しない', () => {
+      const { result } = renderHook(() => useVoiceStateMachine());
+      advanceToListening(result);
+
+      const commandOptions = getLastRecognitionOptionsByMode('command');
+
+      act(() => {
+        simulateCommand('右');
+      });
+      expect(result.current.state).toBe('SPEAKING_ROGER');
+
+      const commandCallsBefore = mockStartRecognition.mock.calls.filter(
+        (call) => call[0].mode === 'command'
+      ).length;
+
+      // command セッション終了イベント
+      act(() => {
+        commandOptions.onEnd();
+      });
+
+      const commandCallsAfter = mockStartRecognition.mock.calls.filter(
+        (call) => call[0].mode === 'command'
+      ).length;
+      expect(commandCallsAfter).toBe(commandCallsBefore);
     });
   });
 
