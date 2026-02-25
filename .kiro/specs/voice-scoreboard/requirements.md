@@ -44,7 +44,7 @@
 
 #### Acceptance Criteria
 1. While 音声認識が有効な状態, the Voice Scoreboard shall 常時リスニングを行い、ウェイクワード「スコア」を待機する（IDLE状態）
-2. When IDLE状態でウェイクワード「スコア」が検知された, the Voice Scoreboard shall 「Ready」と音声で応答し、LISTENING状態に遷移する
+2. When IDLE状態でウェイクワード「スコア」が検知された, the Voice Scoreboard shall 短い効果音（Ready音）を再生しつつ、即座にLISTENING状態に遷移する
 3. While LISTENING状態, the Voice Scoreboard shall 画面中央にマイクアイコンと「Ready」テキストを表示し、背景のスコアをディム表示にする
 4. While LISTENING状態, the Voice Scoreboard shall 5秒間のカウントダウンを表示する
 5. When LISTENING状態で5秒間コマンドが検知されなかった, the Voice Scoreboard shall IDLE状態に自動的に戻る
@@ -63,7 +63,7 @@
 **Objective:** 練習参加者として、操作に対するシステム応答を音声で受け取りたい。画面を見なくても操作結果を確認できるようにするため。
 
 #### Acceptance Criteria
-1. When ウェイクワードが検知された, the Voice Scoreboard shall 「Ready」と音声で読み上げる
+1. When ウェイクワードが検知された, the Voice Scoreboard shall 短い効果音（Ready音）を再生する（TTS読み上げではなく、事前録音の効果音を使用。コマンド認識の開始をブロックしない）
 2. When 音声コマンドが検知された, the Voice Scoreboard shall 「Roger」と音声で読み上げる
 3. When 音声コマンド（右/左/ロールバック/リセット）が実行された, the Voice Scoreboard shall 「左{点数} 右{点数}」の形式で現在のスコアを読み上げる
 5. When タッチ操作で得点が変更された, the Voice Scoreboard shall 音声読み上げは行わない
@@ -82,7 +82,7 @@
 1. The Voice Scoreboard shall 音声認識のオン/オフ切り替え機能を提供する
 2. The Voice Scoreboard shall 音声読み上げのオン/オフ切り替え機能を提供する
 3. When 音声認識がオフに設定された, the Voice Scoreboard shall ウェイクワードの検知を停止する
-4. When 音声読み上げがオフに設定された, the Voice Scoreboard shall 「Ready」「Roger」およびスコアの読み上げを行わない（ホイッスル音は除く）
+4. When 音声読み上げがオフに設定された, the Voice Scoreboard shall 「Roger」およびスコアの読み上げを行わない（Ready効果音・ホイッスル音は読み上げ設定に関係なく常に再生する）
 5. When 設定が変更された, the Voice Scoreboard shall 設定値を永続化し、次回起動時に復元する
 
 ### Requirement 9: パフォーマンス・非機能要件

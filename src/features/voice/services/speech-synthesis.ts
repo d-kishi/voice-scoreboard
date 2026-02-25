@@ -20,6 +20,16 @@ import { log } from '../../../utils/logger';
  */
 const LANGUAGE = 'ja-JP';
 
+/**
+ * 【目的】TTS の声の高さ（ピッチ）を制御する
+ */
+const PITCH = 0.6;
+
+/**
+ * 【目的】TTS の読み上げ速度を制御する
+ */
+const RATE = 1.3;
+
 // =================================================================
 // パブリック API
 // =================================================================
@@ -37,6 +47,8 @@ export function speak(text: string, onDone: () => void): void {
   log('SS', `speak: "${text}"`);
   Speech.speak(text, {
     language: LANGUAGE,
+    pitch: PITCH,
+    rate: RATE,
     onDone: () => {
       log('SS', `speak done: "${text}"`);
       onDone();
@@ -88,7 +100,7 @@ export function speakReady(onDone: () => void): void {
  * @param onDone 読み上げ完了時に呼ばれるコールバック
  */
 export function speakRoger(onDone: () => void): void {
-  speak('Roger', onDone);
+  speak('ラージャ', onDone);
 }
 
 /**
@@ -101,10 +113,6 @@ export function speakRoger(onDone: () => void): void {
  * @param rightScore 右チームの得点
  * @param onDone 読み上げ完了時に呼ばれるコールバック
  */
-export function speakScore(
-  leftScore: number,
-  rightScore: number,
-  onDone: () => void
-): void {
-  speak(`左${leftScore} 右${rightScore}`, onDone);
+export function speakScore(leftScore: number, rightScore: number, onDone: () => void): void {
+  speak(`ひだり${leftScore}、みぎ${rightScore}`, onDone);
 }

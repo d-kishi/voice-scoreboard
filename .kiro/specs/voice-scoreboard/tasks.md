@@ -212,13 +212,29 @@
   - 音声認識のオンデバイスモデルがオフラインで利用可能か確認
   - _Requirements: 9.1, 9.2, 9.3_
 
-- [ ] 8.2 プラットフォーム互換性の確認
+- [ ] 8.2 (P) ウェイクワード→コマンド受付のレスポンス改善
+  - SPEAKING_READY 状態を廃止し、WAKEWORD_DETECTED で直接 LISTENING に遷移する（6状態→5状態）
+  - "Ready" 応答を TTS（expo-speech）から事前録音の効果音（expo-av）に変更
+  - Ready 効果音は LISTENING 進入時に fire-and-forget で再生（コマンド認識の開始をブロックしない）
+  - SoundService に 'ready' タイプを追加（既存の 'whistle' パターンを流用）
+  - Ready 効果音アセット（assets/sounds/ready.wav）を作成・配置
+  - SpeechSynthesisService から speakReady() を削除
+  - VoiceState 型から 'SPEAKING_READY' を削除
+  - VoiceAction 型から 'SPEECH_READY_DONE' を削除
+  - voice-state-reducer: WAKEWORD_DETECTED → LISTENING 直接遷移に変更
+  - use-voice-state-machine: SPEAKING_READY ケース削除、LISTENING 進入時に Ready 効果音再生を追加
+  - 設定反映: Ready 効果音は isSpeechEnabled に関係なく常に再生（Req 8.4 変更）
+  - テスト更新: reducer テスト（SPEAKING_READY 関連削除・直接遷移追加）、hook 統合テスト（speakReady → sound.play 変更）、sound.test.ts に ready テスト追加
+  - _Requirements: 4.2, 6.1, 8.4, 9.2_
+  - _Contracts: useVoiceStateMachine State, SoundService Service_
+
+- [ ] 8.3 プラットフォーム互換性の確認
   - iOS 14.0以上とAndroid 10以上での動作検証
   - Android固有の音声認識: continuous モードでのセッション維持と安定性の実機確認
   - マイク権限フローのプラットフォーム差異を確認
   - _Requirements: 9.4, 9.5_
 
-- [ ] 8.3 (M6) Android 実機による最終検証
+- [ ] 8.4 (M6) Android 実機による最終検証
   - 音声認識の日本語（ja-JP）認識精度とレスポンスを実機で確認
   - 音声コマンド E2E フロー（「スコア」→「Ready」→コマンド→スコア反映）の実機動作確認
   - エミュレータで検証できなかった項目（M4/M5 で委ねた項目）の実機フォローアップ

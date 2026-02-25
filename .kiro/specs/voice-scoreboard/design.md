@@ -170,8 +170,7 @@ graph TB
 stateDiagram-v2
     [*] --> IDLE
 
-    IDLE --> SPEAKING_READY: ウェイクワード検知
-    SPEAKING_READY --> LISTENING: Ready読み上げ完了
+    IDLE --> LISTENING: ウェイクワード検知（+ Ready効果音 fire-and-forget）
     LISTENING --> SPEAKING_ROGER: コマンド検知
     LISTENING --> IDLE: 5秒タイムアウト
     SPEAKING_ROGER --> EXECUTING: Roger読み上げ完了
@@ -180,9 +179,10 @@ stateDiagram-v2
 ```
 
 **Key Decisions**:
-- SPEAKING_READY / SPEAKING_ROGER / SPEAKING_SCORE 状態を追加。音声認識と読み上げの排他制御を状態マシンで保証する
+- SPEAKING_ROGER / SPEAKING_SCORE 状態で音声認識と読み上げの排他制御を状態マシンで保証する
 - 読み上げ中は音声認識を停止し、完了コールバックで次の状態に遷移
-- IDLE→SPEAKING_READY遷移時に音声認識を一旦停止→Ready読み上げ→LISTENING開始で認識を再開
+- ウェイクワード検知時は SPEAKING_READY 状態を経由せず、即座に LISTENING に遷移する。Ready 応答は TTS ではなく事前録音の効果音（expo-av）を fire-and-forget で再生し、コマンド認識の開始をブロックしない。これにより、ウェイクワード検知からコマンド受付開始までの遅延を約1秒から約200msに短縮する
+- Android では SpeechRecognizer と TextToSpeech が Audio Focus を競合するため同時実行不可。Ready を効果音（expo-av の MediaPlayer）に変更することでこの制約を回避する
 
 ### 得点操作フロー（タッチ）
 
@@ -232,7 +232,8 @@ sequenceDiagram
 | 4.5 | 5秒タイムアウトでIDLE復帰 | useVoiceStateMachine | VoiceState | 音声コマンド状態マシン |
 | 5.1-5.4 | 音声コマンドでスコア操作 | useVoiceStateMachine, useScore | VoiceCommand | 音声コマンド状態マシン |
 | 5.5 | コマンド実行後IDLE復帰 | useVoiceStateMachine | VoiceState | 音声コマンド状態マシン |
-| 6.1-6.2 | Ready/Roger読み上げ | SpeechSynthesisService | SpeechSynthesisService | 音声コマンド状態マシン |
+| 6.1 | Ready効果音再生 | SoundService | SoundService | 音声コマンド状態マシン |
+| 6.2 | Roger読み上げ | SpeechSynthesisService | SpeechSynthesisService | 音声コマンド状態マシン |
 | 6.3-6.5 | スコア読み上げルール | useVoiceStateMachine, SpeechSynthesisService | - | 音声コマンド状態マシン |
 | 6.6 | ホイッスル音 | SoundService | SoundService | - |
 | 7.1 | 画面スリープ防止 | ScoreScreen | useKeepAwake | - |
@@ -254,8 +255,8 @@ sequenceDiagram
 | GameRules | Score/Service | 試合ルールの純粋関数群 | 3.1, 3.2 | なし | Service |
 | useVoiceStateMachine | Voice/Hook | K.I.T.T.スタイル音声状態マシン | 4.1-5.5, 6.1-6.5 | SpeechRecognitionService, SpeechSynthesisService, useScore | State |
 | SpeechRecognitionService | Voice/Service | expo-speech-recognition のラッパー | 4.1, 4.2, 5.1-5.4 | expo-speech-recognition (P0) | Service |
-| SpeechSynthesisService | Voice/Service | expo-speech のラッパー | 6.1-6.4 | expo-speech (P0) | Service |
-| SoundService | Voice/Service | expo-av による効果音再生 | 6.6 | expo-av (P0) | Service |
+| SpeechSynthesisService | Voice/Service | expo-speech のラッパー | 6.2-6.4 | expo-speech (P0) | Service |
+| SoundService | Voice/Service | expo-av による効果音再生（Ready音・ホイッスル音） | 6.1, 6.6 | expo-av (P0) | Service |
 | useSettings | Settings/Hook | 設定管理ロジック | 8.1-8.5 | SettingsStore | State |
 | SettingsStore | Settings/Store | zustand + persist による設定永続化 | 8.5 | AsyncStorage (P0) | State |
 
@@ -421,7 +422,7 @@ interface SpeechRecognitionService {
 | Field | Detail |
 |-------|--------|
 | Intent | expo-speech による音声読み上げ |
-| Requirements | 6.1-6.4 |
+| Requirements | 6.2-6.4 |
 
 **Responsibilities & Constraints**
 - テキストの音声読み上げ
@@ -448,11 +449,13 @@ interface SpeechSynthesisService {
 
 | Field | Detail |
 |-------|--------|
-| Intent | expo-av によるホイッスル音などの効果音再生 |
-| Requirements | 6.6 |
+| Intent | expo-av による効果音再生（Ready音・ホイッスル音） |
+| Requirements | 6.1, 6.6 |
 
 **Responsibilities & Constraints**
-- ローカルアセットからの音声ファイル再生
+- ローカルアセットからの音声ファイル再生（Ready効果音・ホイッスル音）
+- Ready効果音: ウェイクワード検知時に fire-and-forget で再生（完了を待たない）
+- ホイッスル音: 試合終了時に maxDurationMs で再生時間を制御
 - 再生完了後のリソース解放
 
 **Dependencies**
@@ -462,10 +465,10 @@ interface SpeechSynthesisService {
 
 ##### Service Interface
 ```typescript
-type SoundType = 'whistle';
+type SoundType = 'whistle' | 'ready';
 
 interface SoundService {
-  play(type: SoundType): Promise<void>;
+  play(type: SoundType, maxDurationMs?: number): Promise<void>;
   preload(): Promise<void>;
 }
 ```
@@ -478,8 +481,9 @@ interface SoundService {
 | Requirements | 4.1-5.5, 6.1-6.5 |
 
 **Responsibilities & Constraints**
-- IDLE→SPEAKING_READY→LISTENING→SPEAKING_ROGER→EXECUTING→SPEAKING_SCORE→IDLE の状態管理
-- 音声認識と読み上げの排他制御
+- IDLE→LISTENING→SPEAKING_ROGER→EXECUTING→SPEAKING_SCORE→IDLE の状態管理（5状態）
+- 音声認識と読み上げの排他制御（SPEAKING_ROGER / SPEAKING_SCORE 中は認識停止）
+- ウェイクワード検知時の Ready 効果音再生（SoundService 経由、fire-and-forget）
 - 5秒タイムアウトの管理
 - ウェイクワード「スコア」とコマンド語彙の判定
 - 設定（音声認識ON/OFF、読み上げON/OFF）の反映
@@ -498,7 +502,6 @@ interface SoundService {
 ```typescript
 type VoiceState =
   | 'IDLE'
-  | 'SPEAKING_READY'
   | 'LISTENING'
   | 'SPEAKING_ROGER'
   | 'EXECUTING'

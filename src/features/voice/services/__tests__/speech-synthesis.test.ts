@@ -39,6 +39,8 @@ describe('SpeechSynthesisService', () => {
         'テスト',
         expect.objectContaining({
           language: 'ja-JP',
+          pitch: 0.8,
+          rate: 1.0,
         })
       );
     });
@@ -114,6 +116,8 @@ describe('SpeechSynthesisService', () => {
         'Ready',
         expect.objectContaining({
           language: 'ja-JP',
+          pitch: 0.8,
+          rate: 1.0,
         })
       );
     });
@@ -128,14 +132,16 @@ describe('SpeechSynthesisService', () => {
   });
 
   describe('speakRoger()', () => {
-    it('「Roger」を読み上げる', () => {
+    it('「ラージャ」（Roger）を読み上げる', () => {
       const onDone = jest.fn();
       speakRoger(onDone);
 
       expect(Speech.speak).toHaveBeenCalledWith(
-        'Roger',
+        'ラージャ',
         expect.objectContaining({
           language: 'ja-JP',
+          pitch: 0.8,
+          rate: 1.0,
         })
       );
     });
@@ -150,14 +156,16 @@ describe('SpeechSynthesisService', () => {
   });
 
   describe('speakScore()', () => {
-    it('「左{点数} 右{点数}」の形式で読み上げる', () => {
+    it('「ひだり{点数}、みぎ{点数}」の形式で読み上げる', () => {
       const onDone = jest.fn();
       speakScore(15, 20, onDone);
 
       expect(Speech.speak).toHaveBeenCalledWith(
-        '左15 右20',
+        'ひだり15、みぎ20',
         expect.objectContaining({
           language: 'ja-JP',
+          pitch: 0.8,
+          rate: 1.0,
         })
       );
     });
@@ -167,9 +175,11 @@ describe('SpeechSynthesisService', () => {
       speakScore(0, 0, onDone);
 
       expect(Speech.speak).toHaveBeenCalledWith(
-        '左0 右0',
+        'ひだり0、みぎ0',
         expect.objectContaining({
           language: 'ja-JP',
+          pitch: 0.8,
+          rate: 1.0,
         })
       );
     });
