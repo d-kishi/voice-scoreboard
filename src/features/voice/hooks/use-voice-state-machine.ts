@@ -32,7 +32,12 @@ import {
   speakScore,
   stopSpeaking,
 } from '../services/speech-synthesis';
-import { parseCommand, isWakeword } from '../services/command-parser';
+import {
+  parseCommand,
+  parseCommandFromAlternatives,
+  isWakeword,
+  isWakewordInAlternatives,
+} from '../services/command-parser';
 import { useScore } from '../../score/hooks/use-score';
 import { useSettings } from '../../settings/hooks/use-settings';
 import { log, warn } from '../../../utils/logger';
@@ -160,10 +165,13 @@ export function useVoiceStateMachine(): UseVoiceStateMachineReturn {
     startRecognition({
       mode: 'wakeword',
       lang: 'ja-JP',
-      onResult: (transcript: string, isFinal: boolean) => {
+      onResult: (transcript: string, isFinal: boolean, allTranscripts?: string[]) => {
         if (isFinal) {
-          const matched = isWakeword(transcript);
-          log('SM', `wakeword result: "${transcript}" matched=${matched}`);
+          // 【目的】複数候補があれば全候補を走査し、なければ第1候補のみで判定
+          const matched = allTranscripts
+            ? isWakewordInAlternatives(allTranscripts)
+            : isWakeword(transcript);
+          log('SM', `wakeword result: "${transcript}" matched=${matched} alternatives=${allTranscripts?.length ?? 1}`);
           if (matched && isMountedRef.current) {
             dispatch({ type: 'WAKEWORD_DETECTED' });
           }
@@ -205,11 +213,14 @@ export function useVoiceStateMachine(): UseVoiceStateMachineReturn {
     startRecognition({
       mode: 'command',
       lang: 'ja-JP',
-      onResult: (transcript: string, isFinal: boolean) => {
+      onResult: (transcript: string, isFinal: boolean, allTranscripts?: string[]) => {
         if (!isMountedRef.current) return;
-        const command = parseCommand(transcript);
+        // 【目的】複数候補があれば全候補を走査し、なければ第1候補のみで判定
+        const command = allTranscripts
+          ? parseCommandFromAlternatives(allTranscripts)
+          : parseCommand(transcript);
         if (command) {
-          log('SM', `command result: "${transcript}" isFinal=${isFinal} parsed=${command}`);
+          log('SM', `command result: "${transcript}" isFinal=${isFinal} parsed=${command} alternatives=${allTranscripts?.length ?? 1}`);
           dispatch({ type: 'COMMAND_DETECTED', command });
         }
       },

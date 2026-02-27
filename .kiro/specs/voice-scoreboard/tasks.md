@@ -225,7 +225,7 @@
   - _Requirements: 4.2, 6.1, 8.4, 9.2_
   - _Contracts: useVoiceStateMachine State_
 
-- [ ] 8.3 プラットフォーム互換性の確認
+- [x] 8.3 プラットフォーム互換性の確認
   - iOS 14.0以上とAndroid 10以上での動作検証
   - Android固有の音声認識: continuous モードでのセッション維持と安定性の実機確認
   - マイク権限フローのプラットフォーム差異を確認

@@ -727,6 +727,45 @@ describe('useVoiceStateMachine', () => {
   });
 
   // =================================================================
+  // 複数候補走査（maxAlternatives）
+  // =================================================================
+  describe('複数候補走査', () => {
+    it('第1候補が不一致でも第2候補でウェイクワードを検知する', () => {
+      const { result } = renderHook(() => useVoiceStateMachine());
+
+      act(() => {
+        const options = getLastRecognitionOptionsByMode('wakeword');
+        options.onResult('こんにちは', true, ['こんにちは', 'スコア']);
+      });
+
+      expect(result.current.state).toBe('LISTENING');
+    });
+
+    it('第1候補が不一致でも第2候補でコマンドを検知する', () => {
+      const { result } = renderHook(() => useVoiceStateMachine());
+      advanceToListening(result);
+
+      act(() => {
+        const options = getLastRecognitionOptionsByMode('command');
+        options.onResult('えー', true, ['えー', '右']);
+      });
+
+      expect(result.current.state).toBe('SPEAKING_ROGER');
+    });
+
+    it('全候補不一致の場合はウェイクワード未検知のまま', () => {
+      const { result } = renderHook(() => useVoiceStateMachine());
+
+      act(() => {
+        const options = getLastRecognitionOptionsByMode('wakeword');
+        options.onResult('こんにちは', true, ['こんにちは', 'さようなら']);
+      });
+
+      expect(result.current.state).toBe('IDLE');
+    });
+  });
+
+  // =================================================================
   // クリーンアップ
   // =================================================================
   describe('クリーンアップ', () => {

@@ -63,7 +63,7 @@ export const INITIAL_VOICE_STATE: VoiceReducerState = {
 };
 
 /** 【目的】LISTENING 状態のカウントダウン秒数 */
-export const LISTENING_DURATION = 5;
+export const LISTENING_DURATION = 10;
 
 // =================================================================
 // reducer 本体

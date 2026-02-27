@@ -25,7 +25,8 @@ export type SpeechRecognitionMode = 'wakeword' | 'command';
 export interface SpeechRecognitionOptions {
   readonly mode: SpeechRecognitionMode;
   readonly lang: string;
-  readonly onResult: (transcript: string, isFinal: boolean) => void;
+  /** 【目的】認識結果のコールバック。allTranscripts は maxAlternatives による全候補 */
+  readonly onResult: (transcript: string, isFinal: boolean, allTranscripts?: string[]) => void;
   readonly onEnd: () => void;
   readonly onError: (error: string) => void;
 }
@@ -39,7 +40,16 @@ export interface SpeechRecognitionOptions {
  * 【根拠】expo-speech-recognition の contextualStrings に渡すことで、
  *        認識エンジンがこれらの語彙を優先的にマッチングする
  */
-const COMMAND_VOCABULARY = ['右', '左', 'ロールバック', 'リセット'] as const;
+/**
+ * 【目的】コマンドモードで認識精度を向上させるための語彙リスト（ひらがなエイリアス含む）
+ * 【根拠】音声認識エンジンがひらがなで返すケースにも対応するため、
+ *        漢字/カタカナとひらがなの両方を contextualStrings に含める。
+ */
+const COMMAND_VOCABULARY = [
+  '右', '左', 'ロールバック', 'リセット',
+  'みぎ', 'みぎー', 'ひだり', 'ひだりー',
+  'ろーるばっく', 'りせっと',
+] as const;
 
 /**
  * 【目的】Android 向けの無音判定時間の延長（ミリ秒）
@@ -112,14 +122,17 @@ export function startRecognition(options: SpeechRecognitionOptions): void {
   log('SR', `startRecognition mode=${options.mode} lang=${options.lang}`);
 
   // 【目的】認識結果のイベントリスナー
+  // 【根拠】maxAlternatives で取得した全候補を allTranscripts として渡す。
+  //        第1候補が不一致でも後続候補でコマンド/ウェイクワードを検知できる。
   addManagedListener('result', (data: unknown) => {
     const event = data as {
       results: Array<{ transcript: string }>;
       isFinal: boolean;
     };
-    const transcript = event.results[0]?.transcript ?? '';
-    log('SR', `result: transcript="${transcript}" isFinal=${event.isFinal}`);
-    currentOptions?.onResult(transcript, event.isFinal);
+    const allTranscripts = event.results.map((r) => r.transcript);
+    const transcript = allTranscripts[0] ?? '';
+    log('SR', `result: transcript="${transcript}" isFinal=${event.isFinal} alternatives=${allTranscripts.length}`);
+    currentOptions?.onResult(transcript, event.isFinal, allTranscripts);
   });
 
   // 【目的】認識終了のイベントリスナー
@@ -155,14 +168,32 @@ function buildStartOptions(
     lang: options.lang,
     interimResults: true,
     continuous: options.mode === 'wakeword',
+    // 【目的】複数候補を取得して認識精度を向上させる
+    // 【根拠】第1候補が不一致でも第2候補以降にコマンドが含まれる可能性を拾う
+    maxAlternatives: 5,
   };
+
+  // 【目的】短い単語の認識精度を向上させる（全モード共通）
+  // 【根拠】デフォルトの free_form モデルは自由発話向けだが、
+  //        ウェイクワード（「スコア」）もコマンド（「右」「左」等）も短い単語のため
+  //        web_search モデルの方が適している。
+  //        Google 開発チームが単一ワード認識に web_search を推奨している。
+  baseOptions.androidIntentOptions = {
+    EXTRA_LANGUAGE_MODEL: 'web_search',
+  };
+
+  if (options.mode === 'wakeword') {
+    // 【目的】ウェイクワード「スコア」の認識精度を向上させる
+    // 【根拠】contextualStrings に指定することで認識エンジンが優先マッチングする
+    // 【目的】伸ばしバリエーションも含めて認識精度を向上させる
+    // 【根拠】遠距離からの発話で「スコアー」と伸ばすケースに対応する
+    baseOptions.contextualStrings = ['スコア', 'スコアー', 'すこあ', 'すこあー'];
+  }
 
   if (options.mode === 'command') {
     baseOptions.contextualStrings = [...COMMAND_VOCABULARY];
-    baseOptions.androidIntentOptions = {
-      EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS:
-        ANDROID_SILENCE_TIMEOUT_MS,
-    };
+    (baseOptions.androidIntentOptions as Record<string, unknown>).EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS =
+      ANDROID_SILENCE_TIMEOUT_MS;
   }
 
   return baseOptions;

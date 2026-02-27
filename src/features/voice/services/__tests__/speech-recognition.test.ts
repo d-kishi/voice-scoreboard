@@ -40,7 +40,7 @@ describe('SpeechRecognitionService', () => {
       ...overrides,
     });
 
-    it('wakeword モードで start() を呼ぶと continuous: true で開始される', () => {
+    it('wakeword モードで start() を呼ぶと continuous: true, maxAlternatives: 5 で開始される', () => {
       const options = createWakewordOptions();
       startRecognition(options);
 
@@ -49,20 +49,21 @@ describe('SpeechRecognitionService', () => {
           lang: 'ja-JP',
           interimResults: true,
           continuous: true,
+          maxAlternatives: 5,
         })
       );
     });
 
-    it('wakeword モードでは contextualStrings が設定されない', () => {
+    it('wakeword モードでは contextualStrings に「スコア」が設定される', () => {
       const options = createWakewordOptions();
       startRecognition(options);
 
       const callArgs = (ExpoSpeechRecognitionModule.start as jest.Mock).mock
         .calls[0][0];
-      expect(callArgs.contextualStrings).toBeUndefined();
+      expect(callArgs.contextualStrings).toEqual(['スコア', 'スコアー', 'すこあ', 'すこあー']);
     });
 
-    it('認識結果を受け取ると onResult コールバックが呼ばれる', () => {
+    it('認識結果を受け取ると onResult コールバックが呼ばれる（allTranscripts 付き）', () => {
       const onResult = jest.fn();
       const options = createWakewordOptions({ onResult });
       startRecognition(options);
@@ -72,7 +73,7 @@ describe('SpeechRecognitionService', () => {
         isFinal: true,
       });
 
-      expect(onResult).toHaveBeenCalledWith('スコア', true);
+      expect(onResult).toHaveBeenCalledWith('スコア', true, ['スコア']);
     });
 
     it('部分的な認識結果（isFinal: false）でも onResult が呼ばれる', () => {
@@ -85,7 +86,23 @@ describe('SpeechRecognitionService', () => {
         isFinal: false,
       });
 
-      expect(onResult).toHaveBeenCalledWith('すこ', false);
+      expect(onResult).toHaveBeenCalledWith('すこ', false, ['すこ']);
+    });
+
+    it('複数候補がある場合 allTranscripts に全候補が含まれる', () => {
+      const onResult = jest.fn();
+      const options = createWakewordOptions({ onResult });
+      startRecognition(options);
+
+      __emitEvent('result', {
+        results: [
+          { transcript: 'こんにちは' },
+          { transcript: 'スコア' },
+        ],
+        isFinal: true,
+      });
+
+      expect(onResult).toHaveBeenCalledWith('こんにちは', true, ['こんにちは', 'スコア']);
     });
 
     it('end イベントで onEnd が通知される（continuous モードのため再起動しない）', () => {
@@ -137,7 +154,11 @@ describe('SpeechRecognitionService', () => {
           lang: 'ja-JP',
           interimResults: true,
           continuous: false,
-          contextualStrings: ['右', '左', 'ロールバック', 'リセット'],
+          contextualStrings: [
+            '右', '左', 'ロールバック', 'リセット',
+            'みぎ', 'みぎー', 'ひだり', 'ひだりー',
+            'ろーるばっく', 'りせっと',
+          ],
         })
       );
     });
@@ -149,13 +170,16 @@ describe('SpeechRecognitionService', () => {
       const callArgs = (ExpoSpeechRecognitionModule.start as jest.Mock).mock
         .calls[0][0];
       expect(callArgs.androidIntentOptions).toBeDefined();
+      expect(callArgs.androidIntentOptions.EXTRA_LANGUAGE_MODEL).toBe(
+        'web_search'
+      );
       expect(
         callArgs.androidIntentOptions
           .EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS
       ).toBeDefined();
     });
 
-    it('認識結果を受け取ると onResult コールバックが呼ばれる', () => {
+    it('認識結果を受け取ると onResult コールバックが呼ばれる（allTranscripts 付き）', () => {
       const onResult = jest.fn();
       const options = createCommandOptions({ onResult });
       startRecognition(options);
@@ -165,7 +189,7 @@ describe('SpeechRecognitionService', () => {
         isFinal: true,
       });
 
-      expect(onResult).toHaveBeenCalledWith('右', true);
+      expect(onResult).toHaveBeenCalledWith('右', true, ['右']);
     });
 
     it('end イベントで自動再起動しない', () => {
@@ -355,7 +379,7 @@ describe('SpeechRecognitionService', () => {
 
       // 【根拠】2 つ目の start で 1 つ目のリスナーは解除されるため、1 つ目の onResult は呼ばれない
       expect(firstOnResult).not.toHaveBeenCalled();
-      expect(secondOnResult).toHaveBeenCalledWith('右', true);
+      expect(secondOnResult).toHaveBeenCalledWith('右', true, ['右']);
     });
   });
 });
