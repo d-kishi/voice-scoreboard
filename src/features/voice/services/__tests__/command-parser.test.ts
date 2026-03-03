@@ -9,6 +9,7 @@ import {
   parseCommandFromAlternatives,
   isWakeword,
   isWakewordInAlternatives,
+  isSubsequenceMatch,
 } from '../command-parser';
 
 describe('parseCommand', () => {
@@ -169,6 +170,17 @@ describe('isWakeword', () => {
   it('「すこあー」を検知する（末尾ー付き）', () => {
     expect(isWakeword('すこあー')).toBe(true);
   });
+
+  // =================================================================
+  // 部分列マッチング（subsequence フォールバック）
+  // =================================================================
+  it('「スオコツアケ」を検知する（雑音混入の部分列マッチ）', () => {
+    expect(isWakeword('スオコツアケ')).toBe(true);
+  });
+
+  it('「スオオオコオオオア」は検知しない（ギャップ超過）', () => {
+    expect(isWakeword('スオオオコオオオア')).toBe(false);
+  });
 });
 
 // =================================================================
@@ -210,5 +222,45 @@ describe('isWakewordInAlternatives', () => {
 
   it('空配列で false を返す', () => {
     expect(isWakewordInAlternatives([])).toBe(false);
+  });
+});
+
+// =================================================================
+// isSubsequenceMatch（部分列マッチング）
+// =================================================================
+describe('isSubsequenceMatch', () => {
+  it('完全一致でマッチする', () => {
+    expect(isSubsequenceMatch('すこあ', 'すこあ', 2)).toBe(true);
+  });
+
+  it('1文字ギャップでマッチする（gap=1）', () => {
+    // "すおこつあけ" から "すこあ" を検出: す(0)→こ(2) gap=1, こ(2)→あ(4) gap=1
+    expect(isSubsequenceMatch('すおこつあけ', 'すこあ', 2)).toBe(true);
+  });
+
+  it('2文字ギャップでマッチする（gap=2、上限ちょうど）', () => {
+    // "すおおこおおあ" から "すこあ": す(0)→こ(3) gap=2, こ(3)→あ(6) gap=2
+    expect(isSubsequenceMatch('すおおこおおあ', 'すこあ', 2)).toBe(true);
+  });
+
+  it('ギャップ超過で棄却する（gap>2）', () => {
+    // "すおおおこおおおあ" から "すこあ": す(0)→こ(4) gap=3 > maxGap=2
+    expect(isSubsequenceMatch('すおおおこおおおあ', 'すこあ', 2)).toBe(false);
+  });
+
+  it('ターゲットが含まれない場合は false', () => {
+    expect(isSubsequenceMatch('あいうえお', 'すこあ', 2)).toBe(false);
+  });
+
+  it('空のターゲットは true', () => {
+    expect(isSubsequenceMatch('すこあ', '', 2)).toBe(true);
+  });
+
+  it('空のテキストは false', () => {
+    expect(isSubsequenceMatch('', 'すこあ', 2)).toBe(false);
+  });
+
+  it('テキストがターゲットより短い場合は false', () => {
+    expect(isSubsequenceMatch('す', 'すこあ', 2)).toBe(false);
   });
 });

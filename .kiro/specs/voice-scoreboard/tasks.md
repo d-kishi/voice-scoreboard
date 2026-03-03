@@ -238,3 +238,16 @@
   - オフライン環境（機内モード）での音声認識オンデバイスモデル動作確認
   - 起動パフォーマンス（3秒以内）の実測
   - _Milestone: M6（実機最終検証 — Release Ready）_
+
+- [x] 8.5 音声認識ノイズ耐性改善
+  - バレーボール練習での実地検証フィードバック: 周囲の会話音混入で「スコア」とコマンドが検知不能
+  - Layer 1: ウェイクワード検知の interim result 対応（isFinal ガード除去）
+    - `use-voice-state-machine.ts` の `startWakewordListening()` で `isFinal` チェックを除去
+    - interim result でも即座にウェイクワード判定し、騒音環境での検知遅延を低減
+  - Layer 2: 部分列（subsequence）マッチング + 距離制約
+    - `command-parser.ts` に `isSubsequenceMatch()` 関数を追加（距離制約付き部分列探索）
+    - `isWakeword()` の第3フォールバックとして統合（maxGap=2）
+    - 雑音混入テキスト（例: "スオコツアケ"）からウェイクワード「スコア」を検出可能に
+  - Layer 3/4: GitHub Issues として起票（Issue #9: コマンド長文エイリアス、Issue #10: ウェイクワード長文化）
+  - テスト: 370テスト全PASS（新規11テスト追加）
+  - 実機検証: YouTube 音楽再生環境で良好な精度を確認

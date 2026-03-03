@@ -157,24 +157,22 @@ export function useVoiceStateMachine(): UseVoiceStateMachineReturn {
    * 【目的】ウェイクワード認識（wakeword モード）を開始する
    * 【根拠】IDLE 状態で常時リスニングし、「スコア」を検知したら
    *        WAKEWORD_DETECTED を dispatch して LISTENING に直接遷移する。
-   *        isFinal のみでウェイクワード検知とする理由:
-   *        interim result で「スコア」が検知されても、最終結果で別の単語に
-   *        確定する可能性があるため。
+   *        interim result（isFinal=false）でも判定する理由:
+   *        騒音環境では isFinal を待つと認識遅延が大きくなるため、
+   *        部分結果の時点で即座に反応する。
    */
   function startWakewordListening(): void {
     startRecognition({
       mode: 'wakeword',
       lang: 'ja-JP',
       onResult: (transcript: string, isFinal: boolean, allTranscripts?: string[]) => {
-        if (isFinal) {
-          // 【目的】複数候補があれば全候補を走査し、なければ第1候補のみで判定
-          const matched = allTranscripts
-            ? isWakewordInAlternatives(allTranscripts)
-            : isWakeword(transcript);
-          log('SM', `wakeword result: "${transcript}" matched=${matched} alternatives=${allTranscripts?.length ?? 1}`);
-          if (matched && isMountedRef.current) {
-            dispatch({ type: 'WAKEWORD_DETECTED' });
-          }
+        // 【目的】複数候補があれば全候補を走査し、なければ第1候補のみで判定
+        const matched = allTranscripts
+          ? isWakewordInAlternatives(allTranscripts)
+          : isWakeword(transcript);
+        log('SM', `wakeword result: "${transcript}" isFinal=${isFinal} matched=${matched} alternatives=${allTranscripts?.length ?? 1}`);
+        if (matched && isMountedRef.current) {
+          dispatch({ type: 'WAKEWORD_DETECTED' });
         }
       },
       onEnd: () => {

@@ -277,6 +277,18 @@ describe('useVoiceStateMachine', () => {
       // 【根拠】Ready TTS は isSpeechEnabled に関係なく常に再生する（Req 8.4 変更）
       expect(mockSpeakReady).toHaveBeenCalled();
     });
+
+    it('interim result（isFinal=false）でもウェイクワードを検知する', () => {
+      const { result } = renderHook(() => useVoiceStateMachine());
+      expect(result.current.state).toBe('IDLE');
+
+      act(() => {
+        const options = getLastRecognitionOptionsByMode('wakeword');
+        options.onResult('スコア', false); // isFinal=false
+      });
+
+      expect(result.current.state).toBe('LISTENING');
+    });
   });
 
   // =================================================================

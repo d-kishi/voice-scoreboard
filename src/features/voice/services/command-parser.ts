@@ -76,6 +76,48 @@ export function parseCommand(transcript: string): VoiceCommand | null {
 }
 
 /**
+ * 【目的】距離制約付き部分列（subsequence）マッチングを行う
+ * 【根拠】周囲の雑音が混入した音声認識結果（例: "すおこつあけ"）から
+ *        ターゲット文字列（例: "すこあ"）を検出するため。
+ *        各文字間の最大ギャップを制約することで、長い文字列での誤マッチを防ぐ。
+ * @param text 検索対象のテキスト（正規化済みを想定）
+ * @param target 探す文字列（正規化済みを想定）
+ * @param maxGap 各文字間で許容する最大ギャップ（間に入る文字数）
+ * @returns target が text の部分列として距離制約内に存在すれば true
+ */
+export function isSubsequenceMatch(text: string, target: string, maxGap: number): boolean {
+  if (target.length === 0) return true;
+  if (text.length === 0) return false;
+
+  let targetIdx = 0;
+  let lastMatchPos = -1;
+
+  for (let i = 0; i < text.length && targetIdx < target.length; i++) {
+    if (text[i] === target[targetIdx]) {
+      // 最初の文字以外はギャップチェック
+      if (targetIdx > 0) {
+        const gap = i - lastMatchPos - 1;
+        if (gap > maxGap) {
+          // ギャップ超過: リセットして最初から探し直す
+          targetIdx = 0;
+          lastMatchPos = -1;
+          // 現在の文字が target[0] と一致するかもチェック
+          if (text[i] === target[0]) {
+            targetIdx = 1;
+            lastMatchPos = i;
+          }
+          continue;
+        }
+      }
+      lastMatchPos = i;
+      targetIdx++;
+    }
+  }
+
+  return targetIdx === target.length;
+}
+
+/**
  * 【目的】音声認識結果がウェイクワード「スコア」を含むかどうかを判定する
  * 【根拠】ウェイクワードも部分一致で判定する。
  *        「スコアボード」「スコアを」等の発話もウェイクワードとして認識する。
@@ -92,12 +134,25 @@ export function isWakeword(transcript: string): boolean {
     return true;
   }
 
-  // 【フォールバック】長音記号除去マッチング
+  // 【第二フォールバック】長音記号除去マッチング
   // 【根拠】「スコーア」のように中間に長音記号が挿入されたケースに対応する
   const stripped = removeLongVowelMark(normalized);
-  const result = stripped.includes('すこあ');
-  log('CMD', `isWakeword("${transcript}") = ${result}${result ? ' (long-vowel fallback)' : ''}`);
-  return result;
+  if (stripped.includes('すこあ')) {
+    log('CMD', `isWakeword("${transcript}") = true (long-vowel fallback)`);
+    return true;
+  }
+
+  // 【第三フォールバック】部分列（subsequence）マッチング
+  // 【根拠】周囲の雑音が混入して認識結果が "スオコツアケ" のように
+  //        ターゲット文字が分散した場合でも、距離制約付きの部分列マッチングで検出する。
+  //        maxGap=2 は「各文字間に最大2文字の雑音を許容」を意味する。
+  if (isSubsequenceMatch(stripped, 'すこあ', 2)) {
+    log('CMD', `isWakeword("${transcript}") = true (subsequence fallback)`);
+    return true;
+  }
+
+  log('CMD', `isWakeword("${transcript}") = false`);
+  return false;
 }
 
 /**

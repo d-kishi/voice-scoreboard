@@ -7,7 +7,10 @@
  *        Contract: SpeechRecognitionService Service（design.md 参照）
  */
 
-import { ExpoSpeechRecognitionModule } from 'expo-speech-recognition';
+import {
+  ExpoSpeechRecognitionModule,
+  type ExpoSpeechRecognitionNativeEventMap,
+} from 'expo-speech-recognition';
 import { log, warn } from '../../../utils/logger';
 
 // =================================================================
@@ -90,8 +93,8 @@ function removeAllSubscriptions(): void {
  * 【根拠】リスナーの登録と管理を一元化し、クリーンアップ漏れを防ぐ
  */
 function addManagedListener(
-  eventName: string,
-  callback: (data: unknown) => void
+  eventName: keyof ExpoSpeechRecognitionNativeEventMap,
+  callback: (data: any) => void
 ): void {
   const subscription = ExpoSpeechRecognitionModule.addListener(
     eventName,

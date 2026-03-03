@@ -9,7 +9,7 @@
  *        Requirements: 6.6 — 試合終了時にホイッスル音を3秒間再生する
  */
 
-import { Audio } from 'expo-av';
+import { Audio, type AVPlaybackStatus } from 'expo-av';
 import { log, warn } from '../../../utils/logger';
 
 // =================================================================
@@ -137,8 +137,8 @@ export async function play(
     // 【根拠】setOnPlaybackStatusUpdate は再生中に複数回呼ばれるが、
     //        didJustFinish: true は再生が最後まで到達した時に1回だけ発火する
     validSound.setOnPlaybackStatusUpdate(
-      (status: { didJustFinish?: boolean }) => {
-        if (status.didJustFinish) {
+      (status: AVPlaybackStatus) => {
+        if (status.isLoaded && status.didJustFinish) {
           finish();
         }
       }
