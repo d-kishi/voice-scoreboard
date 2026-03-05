@@ -1,64 +1,59 @@
 ---
-name: device-deploy
+name: emulator-preview
 description: >-
-  WSL2 環境から Android 実機（Pixel 7a）またはエミュレータにアプリをビルド・デプロイするスキル。
-  以下のケースで使用する:
-  (1) 「実機にデプロイして」「Pixel にインストールして」等のデプロイ依頼
-  (2) 「device-deploy」「/device-deploy」と直接指定された場合
-  (3) logcat でデバッグログを確認したい場合
+  Android エミュレータでアプリの画面表示や動作をプレビュー確認するためのワークフロー（WSL2 + Gradle + adb）。
+  このスキルを使うべき場面: エミュレータでプレビューしたい、エミュレータで確認したい、
+  エミュレータにデプロイして、x86_64 ビルドで試したい、emulator-preview、/emulator-preview。
+  実機へのデプロイには device-deploy スキルを使うこと。
 ---
 
-# Device Deploy（WSL2 + Android）
+# Emulator Preview（WSL2 + Android エミュレータ）
 
-WSL2 上のプロジェクトを Android 実機またはエミュレータにビルド・デプロイするワークフロー。
+WSL2 上のプロジェクトを Android エミュレータにビルド・デプロイして画面表示や動作を確認するワークフロー。
 
 ## 引数
 
-| 引数         | 説明                                       |
-| ------------ | ------------------------------------------ |
-| `--clean`    | デプロイ前にアプリデータをクリア           |
-| `--logcat`   | デプロイ後に logcat ストリーミングを開始   |
-| `--emulator` | 実機ではなくエミュレータをターゲットにする |
+| 引数       | 説明                                     |
+| ---------- | ---------------------------------------- |
+| `--debug`  | debug ビルド（Metro 接続あり）           |
+| `--release`| release ビルド（デフォルト）              |
+| `--logcat` | デプロイ後に logcat ストリーミングを開始 |
+| `--clean`  | デプロイ前にアプリデータをクリア         |
 
 ## 環境情報
 
 | 項目                      | 値                                              |
 | ------------------------- | ----------------------------------------------- |
 | Android SDK               | `/mnt/c/Users/ka837/AppData/Local/Android/Sdk`  |
-| Pixel 7a デバイスID       | `32271JEHN19359`                                |
 | パッケージ名              | `com.voicescoreboard.app`                       |
 | プロジェクト Windows パス | `C:\Develop\voice-scoreboard`                   |
 | エミュレータ AVD          | `Pixel_7a`                                      |
 | adb                       | `~/.local/bin/adb`（WSL2 ラッパー → `adb.exe`） |
+| ターゲットアーキテクチャ  | `x86_64`                                        |
 
 ## ワークフロー
 
-### Step 1: ターゲットデバイス確認
-
-デバイスが接続されているか確認する。
+### Step 1: エミュレータ起動確認
 
 ```bash
-# 接続デバイス一覧
 adb.exe devices
 ```
 
-- **実機**: `32271JEHN19359 device` が表示されれば OK
-- **エミュレータ** (`--emulator`): `emulator-5554 device` が表示されれば OK
-  - 未起動の場合: `/mnt/c/Users/ka837/AppData/Local/Android/Sdk/emulator/emulator.exe -avd Pixel_7a &`
+- `emulator-5554 device` が表示されれば OK
+- 未起動の場合:
+  ```bash
+  /mnt/c/Users/ka837/AppData/Local/Android/Sdk/emulator/emulator.exe -avd Pixel_7a &
+  ```
   - 起動完了まで 30〜60 秒待つ
+  - タッチが反応しない場合は `-no-snapshot-load` でコールドブートする
 
-ターゲットデバイスの ADB シリアルを変数に格納する:
-
-- 実機: `DEVICE_SERIAL=32271JEHN19359`
-- エミュレータ: `DEVICE_SERIAL=emulator-5554`
+ADB シリアルを変数に格納する: `DEVICE_SERIAL=emulator-5554`
 
 ### Step 2: アプリデータクリア（`--clean` 時のみ）
 
 ```bash
 adb.exe -s $DEVICE_SERIAL shell pm clear com.voicescoreboard.app
 ```
-
-AsyncStorage の設定データ等がリセットされる。
 
 ### Step 3: ネイティブコード変更の判断
 
@@ -69,28 +64,13 @@ AsyncStorage の設定データ等がリセットされる。
 
 ### Step 4: JS バンドルキャッシュのクリア（JS/TS 変更時は必須）
 
-JS/TS ソースコードを変更した場合、**ビルド前に Gradle の JS バンドルキャッシュを必ず削除する**。
-Gradle の `createBundleReleaseJsAndAssets` タスクは UP-TO-DATE 判定で古いバンドルを再利用することがあり、ソースコード変更が APK に反映されない。
-
 ```bash
 rm -rf /mnt/c/Develop/voice-scoreboard/android/app/build/generated/assets/createBundleReleaseJsAndAssets/
 ```
 
-ネイティブコード（Java/Kotlin/C++）のみの変更ではこの手順は不要。
-
-### Step 5: ビルド
-
-ターゲットに応じてアーキテクチャを指定する:
+### Step 5: ビルド（x86_64 固定）
 
 ```bash
-# 実機（arm64-v8a）— シングル ABI で CMake コンパイルを1回に削減
-cd /mnt/c/Develop/voice-scoreboard/android && \
-  CMAKE_VERSION=3.28.3 \
-  ./gradlew app:assembleRelease \
-  -PreactNativeArchitectures=arm64-v8a \
-  -x lint -x test --configure-on-demand --build-cache
-
-# エミュレータ（x86_64）
 cd /mnt/c/Develop/voice-scoreboard/android && \
   CMAKE_VERSION=3.28.3 \
   ./gradlew app:assembleRelease \
@@ -98,15 +78,10 @@ cd /mnt/c/Develop/voice-scoreboard/android && \
   -x lint -x test --configure-on-demand --build-cache
 ```
 
-- 初回: ~15 分、キャッシュ済み: ~9 分（シングル ABI）
+- 初回: ~15 分、キャッシュ済み: ~9 分
 - **バックグラウンドで実行**し、ユーザーに所要時間を伝える
 
-**重要**: 両ターゲットとも Gradle 直接実行で `-PreactNativeArchitectures` を指定する。`expo run:android` は全4 ABI をビルドするため CMake コンパイルが4回走り遅い。実機（arm64）とエミュレータ（x86_64）が同時接続の場合、ABI 自動検出の問題もあるため、常に Gradle 直接実行を使うこと。
-
 ### Step 6: APK インストール
-
-`expo run:android` の自動インストールは WSL パスで失敗するため、**Windows パス形式で手動インストール**する。
-インストール前に既存プロセスを強制停止する（古いプロセスが残っていると新しい APK のコードが反映されない）。
 
 ```bash
 adb.exe -s $DEVICE_SERIAL shell am force-stop com.voicescoreboard.app
@@ -120,8 +95,6 @@ adb.exe -s $DEVICE_SERIAL shell am start -n com.voicescoreboard.app/.MainActivit
 ```
 
 ### Step 8: logcat モニタリング（`--logcat` 時、または任意）
-
-**重要**: WSL2 では `adb.exe logcat` のパイプが正常に動作しないことがある。`adb.exe shell "logcat ..."` 形式を使用する。
 
 ```bash
 # バッファクリア
@@ -138,14 +111,13 @@ adb.exe -s $DEVICE_SERIAL shell "logcat -d" | grep ReactNativeJS
 
 ユーザーに以下を報告する:
 
-- ターゲットデバイス（実機 / エミュレータ）
-- アプリが起動したこと
+- エミュレータでアプリが起動したこと
 - logcat モニタリングの状態（開始 / 未開始）
 
 ## WSL2 固有の注意事項
 
-- **サンドボックス無効化必須**: Gradle ビルド（Step 5）は `~/.gradle/` への書き込みが必要。Bash ツールで `dangerouslyDisableSandbox: true` を指定すること。サンドボックス有効のままだと `gradle-*.zip.lck (Read-only file system)` エラーで失敗する
-- **JS バンドルキャッシュ問題**: Gradle は JS バンドルの UP-TO-DATE 判定を誤ることがある。JS/TS を変更した場合は **Step 4 のキャッシュクリアを必ず実行すること**。これを怠るとソースコード変更がデバイスに反映されない（2026-02-25 に発生）
-- **パス変換**: APK インストール時は Windows パス（`C:\\...`）を使用。WSL パス（`/mnt/c/...`）は adb.exe が解釈できない
-- **logcat パイプ問題**: `adb.exe logcat -d | grep ...` は WSL2 で空結果になることがある。`adb.exe shell "logcat -d"` 形式で回避
-- **adb ラッパー**: `~/.local/bin/adb` は `adb.exe` へのラッパー。直接 `adb.exe` を呼んでも同じ
+- **サンドボックス無効化必須**: Gradle ビルド（Step 5）は `~/.gradle/` への書き込みが必要。Bash ツールで `dangerouslyDisableSandbox: true` を指定すること
+- **JS バンドルキャッシュ問題**: JS/TS を変更した場合は Step 4 のキャッシュクリアを必ず実行すること
+- **パス変換**: APK インストール時は Windows パス（`C:\\...`）を使用
+- **logcat パイプ問題**: `adb.exe shell "logcat -d"` 形式で回避
+- **エミュレータタッチ無反応**: スナップショットの入力状態が壊れることがある。`-no-snapshot-load` でコールドブートすれば復旧する

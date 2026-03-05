@@ -1,0 +1,82 @@
+[
+  {
+    "query": "実機に最新のコードをデプロイしたい。音声認識の修正を入れたから実機で確認したい",
+    "should_trigger": true
+  },
+  {
+    "query": "実機にインストールして。さっきの TTS パラメータ変更が実際にどう聞こえるか確認したい",
+    "should_trigger": true
+  },
+  {
+    "query": "/device-deploy --clean --logcat",
+    "should_trigger": true
+  },
+  {
+    "query": "Android 実機にリリースビルドして入れて。arm64 で",
+    "should_trigger": true
+  },
+  {
+    "query": "logcat でさっきのクラッシュログ見たいんだけど、ReactNativeJS のログだけフィルタして",
+    "should_trigger": true
+  },
+  {
+    "query": "実機にデプロイしてから logcat 流して。スコア読み上げの console.log 確認したい",
+    "should_trigger": true
+  },
+  {
+    "query": "adb でアプリのデータクリアしてから再インストールしたい。AsyncStorage の設定がおかしくなったっぽい",
+    "should_trigger": true
+  },
+  {
+    "query": "さっきの修正をデバイスに反映して確認したい",
+    "should_trigger": true
+  },
+  {
+    "query": "release ビルドの APK を実機に入れて動作確認して",
+    "should_trigger": true
+  },
+  {
+    "query": "device-deploy で --emulator つけて。エミュレータで先に試したい",
+    "should_trigger": true
+  },
+  {
+    "query": "エミュレータでプレビューしたい。x86_64 ビルドで画面表示だけ確認したい",
+    "should_trigger": false
+  },
+  {
+    "query": "/emulator-preview --debug でエミュレータに入れて",
+    "should_trigger": false
+  },
+  {
+    "query": "useScore hook のテストが落ちてるんだけど、原因わかる？ jest のモックが怪しい",
+    "should_trigger": false
+  },
+  {
+    "query": "bun run test で全テスト走らせて結果教えて",
+    "should_trigger": false
+  },
+  {
+    "query": "README.md を更新して、インストール方法のセクションを追加したい",
+    "should_trigger": false
+  },
+  {
+    "query": "command-parser.ts のウェイクワード判定ロジックにひらがなマッチングを追加して",
+    "should_trigger": false
+  },
+  {
+    "query": "Google Play ストアに申請するための production ビルドを EAS Build で作りたい",
+    "should_trigger": false
+  },
+  {
+    "query": "expo prebuild --clean してから android/app/build.gradle のパッチを当て直して",
+    "should_trigger": false
+  },
+  {
+    "query": "ScorePanel コンポーネントのスタイルを修正して、フォントサイズをもう少し大きくしたい",
+    "should_trigger": false
+  },
+  {
+    "query": "コミットしてプッシュして",
+    "should_trigger": false
+  }
+]

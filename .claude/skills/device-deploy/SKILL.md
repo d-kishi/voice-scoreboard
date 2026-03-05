@@ -1,11 +1,11 @@
 ---
 name: device-deploy
 description: >-
-  WSL2 環境から Android 実機（Pixel 7a）またはエミュレータにアプリをビルド・デプロイするスキル。
-  以下のケースで使用する:
-  (1) 「実機にデプロイして」「Pixel にインストールして」等のデプロイ依頼
-  (2) 「device-deploy」「/device-deploy」と直接指定された場合
-  (3) logcat でデバッグログを確認したい場合
+  Android 実機またはエミュレータへのビルド・デプロイ・動作確認の一連のワークフロー（WSL2 + Gradle + adb）。
+  このスキルを使うべき場面: 実機にデプロイしたい、実機で確認したい、デバイスにインストールして、
+  APK をビルドして入れて、adb でアプリをインストール、アプリデータをクリアして再インストール、
+  logcat でログを見たい、クラッシュログを確認したい、device-deploy、/device-deploy。
+  コード変更・テスト実行・EAS Build（クラウドビルド）・エミュレータのみのプレビューには使わない。
 ---
 
 # Device Deploy（WSL2 + Android）
