@@ -274,13 +274,26 @@
   - デバッグUI で認識結果を目視確認（エンジンが誤認識 vs 無音扱いかの判別）
   - 「ヘイスコア」vs「スコア」の認識率比較
   - 「右側」vs「右」の認識率比較
-  - Phase 2（AudioSource 変更）ビルドとの比較検証
+  - continuous: false 切り替え後の距離耐性検証（3-5m でのウェイクワード検知）
+  - 連続背景音声中のセグメンテーション改善確認
   - _Milestone: M7（ノイズ耐性改善 実機検証）_
 
-- [ ] 9.4 expo-speech-recognition フォーク（AudioSource 変更）
-  - expo-speech-recognition v3.1.0 をフォークし、AudioSource を変更
-  - ExpoAudioRecorder.kt: `MediaRecorder.AudioSource.VOICE_RECOGNITION` → `VOICE_COMMUNICATION`
-  - VOICE_COMMUNICATION はノイズ抑制 + エコーキャンセラーを有効化（体育館環境向け）
-  - worktree で分離して検証（main ブランチには影響しない）
-  - expo prebuild --clean + android/app/build.gradle パッチが必要
+- [x] 9.4 expo-speech-recognition フォーク（AudioSource 変更）→ **不採用**
+  - VOICE_COMMUNICATION への変更を worktree で検証した結果、ウェイクワード検知精度が明確に悪化
+  - 原因: VOICE_COMMUNICATION は VoIP 向けの攻撃的ノイズ抑制が 1-3m 距離の音声を抑制
+  - worktree 破棄済み
+
+- [x] 9.5 wakeword モードの continuous: false 切り替え → **不採用**
+  - continuous: false にすると SpeechRecognizer のセッション終了後に "RecognitionService busy" エラーが発生
+  - 300ms ディレイを入れても回復せず、無限リトライループに陥る
+  - requiresOnDeviceRecognition: true（createOnDeviceSpeechRecognizer）との組み合わせが原因の可能性
+  - expo-speech-recognition の内部実装が continuous: true を前提としたセッション管理をしており、continuous: false + 自動再開パターンとの互換性がない
+
+- [ ] 9.6 AudioSource.CAMCORDER パッチによる距離耐性改善
+  - expo-speech-recognition の ExpoAudioRecorder.kt を patch-package でパッチ
+  - `MediaRecorder.AudioSource.VOICE_RECOGNITION` → `MediaRecorder.AudioSource.CAMCORDER` に変更
+  - CAMCORDER は動画撮影向け AudioSource で、距離のある音声の収録に最適化（AGC 有効）
+  - VOICE_RECOGNITION は AGC 無効のため 3m 以上で音声検出不可
+  - VOICE_COMMUNICATION（Task 9.4 で不採用）とは異なり、攻撃的なノイズ抑制はない
+  - patch-package で patches/ にパッチファイルを生成し、bun install 後に自動適用
   - _Requirements: 4.1, 5.1_
