@@ -62,10 +62,15 @@ adb.exe -s $DEVICE_SERIAL shell pm clear com.voicescoreboard.app
   - **prebuild --clean 後の復元**: CLAUDE.md の「`expo prebuild --clean` 後に必要な復元」セクションを必ず参照
 - JS/TS のみの変更 → prebuild 不要、Step 4 へ
 
-### Step 4: JS バンドルキャッシュのクリア（JS/TS 変更時は必須）
+### Step 4: JS バンドルキャッシュのクリア（常に実行・スキップ禁止）
+
+**ビルド前に Gradle の JS バンドルキャッシュを必ず削除する。変更内容に関係なく常に実行すること。**
+
+`git checkout` / `git stash` 等でソースを復元した場合、タイムスタンプが更新されず古い JS バンドルが再利用される問題が過去に複数回発生している。
 
 ```bash
 rm -rf /mnt/c/Develop/voice-scoreboard/android/app/build/generated/assets/createBundleReleaseJsAndAssets/
+rm -rf /mnt/c/Develop/voice-scoreboard/android/app/build/intermediates/sourcemaps/
 ```
 
 ### Step 5: ビルド（x86_64 固定）
@@ -117,7 +122,7 @@ adb.exe -s $DEVICE_SERIAL shell "logcat -d" | grep ReactNativeJS
 ## WSL2 固有の注意事項
 
 - **サンドボックス無効化必須**: Gradle ビルド（Step 5）は `~/.gradle/` への書き込みが必要。Bash ツールで `dangerouslyDisableSandbox: true` を指定すること
-- **JS バンドルキャッシュ問題**: JS/TS を変更した場合は Step 4 のキャッシュクリアを必ず実行すること
+- **JS バンドルキャッシュ問題**: Step 4 のキャッシュクリアは常に実行すること（スキップ禁止）
 - **パス変換**: APK インストール時は Windows パス（`C:\\...`）を使用
 - **logcat パイプ問題**: `adb.exe shell "logcat -d"` 形式で回避
 - **エミュレータタッチ無反応**: スナップショットの入力状態が壊れることがある。`-no-snapshot-load` でコールドブートすれば復旧する

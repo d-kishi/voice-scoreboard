@@ -67,16 +67,18 @@ AsyncStorage の設定データ等がリセットされる。
   - **prebuild --clean 後の復元**: CLAUDE.md の「`expo prebuild --clean` 後に必要な復元」セクションを必ず参照
 - JS/TS のみの変更 → prebuild 不要、Step 4 へ
 
-### Step 4: JS バンドルキャッシュのクリア（JS/TS 変更時は必須）
+### Step 4: JS バンドルキャッシュのクリア（常に実行・スキップ禁止）
 
-JS/TS ソースコードを変更した場合、**ビルド前に Gradle の JS バンドルキャッシュを必ず削除する**。
-Gradle の `createBundleReleaseJsAndAssets` タスクは UP-TO-DATE 判定で古いバンドルを再利用することがあり、ソースコード変更が APK に反映されない。
+**ビルド前に Gradle の JS バンドルキャッシュを必ず削除する。変更内容に関係なく常に実行すること。**
+
+Gradle の `createBundleReleaseJsAndAssets` タスクは UP-TO-DATE 判定で古いバンドルを再利用することがあり、特に `git checkout` / `git stash` / `git revert` 等でソースを復元した場合にタイムスタンプが更新されず、古い JS バンドルがそのまま APK に含まれてしまう。この問題は過去に複数回発生している。
 
 ```bash
 rm -rf /mnt/c/Develop/voice-scoreboard/android/app/build/generated/assets/createBundleReleaseJsAndAssets/
+rm -rf /mnt/c/Develop/voice-scoreboard/android/app/build/intermediates/sourcemaps/
 ```
 
-ネイティブコード（Java/Kotlin/C++）のみの変更ではこの手順は不要。
+**このステップは条件分岐なしで常に実行する。** キャッシュクリアのコストは数秒だが、古いバンドルがデプロイされるリスクは数十分のデバッグ時間を浪費する。
 
 ### Step 5: ビルド
 
