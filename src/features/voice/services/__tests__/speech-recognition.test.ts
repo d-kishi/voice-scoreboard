@@ -60,7 +60,11 @@ describe('SpeechRecognitionService', () => {
 
       const callArgs = (ExpoSpeechRecognitionModule.start as jest.Mock).mock
         .calls[0][0];
-      expect(callArgs.contextualStrings).toEqual(['スコア', 'スコアー', 'すこあ', 'すこあー']);
+      expect(callArgs.contextualStrings).toEqual([
+        'スコア', 'スコアー', 'すこあ', 'すこあー',
+        'ヘイスコア', 'へいすこあ',
+        'スコアボード', 'すこあぼーど',
+      ]);
     });
 
     it('認識結果を受け取ると onResult コールバックが呼ばれる（allTranscripts 付き）', () => {
@@ -158,6 +162,9 @@ describe('SpeechRecognitionService', () => {
             '右', '左', 'ロールバック', 'リセット',
             'みぎ', 'みぎー', 'ひだり', 'ひだりー',
             'ろーるばっく', 'りせっと',
+            '右側', '左側', 'みぎがわ', 'ひだりがわ',
+            '右チーム', '左チーム',
+            '取り消し', 'とりけし',
           ],
         })
       );

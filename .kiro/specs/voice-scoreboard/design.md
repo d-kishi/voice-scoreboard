@@ -246,7 +246,8 @@ sequenceDiagram
 |-----------|-------------|--------|--------------|------------------|-----------|
 | ScoreScreen | UI | メイン画面。横画面スコアボード全体 | 1.1, 1.3, 7.1 | useScore, useVoiceStateMachine, useSettings | - |
 | ScorePanel | UI | 左右チームのスコア表示 + +1/-1ボタン | 1.2, 2.1, 2.2 | useScore | - |
-| ListeningOverlay | UI | LISTENING状態のオーバーレイ表示 | 4.3, 4.4 | useVoiceStateMachine | - |
+| ListeningOverlay | UI | LISTENING状態のオーバーレイ表示 + 認識テキスト表示 | 4.3, 4.4 | useVoiceStateMachine | - |
+| DebugTranscriptOverlay | UI | IDLE状態での認識テキスト・RMS dBデバッグ表示 | - | useVoiceStateMachine | - |
 | GameEndOverlay | UI | 試合終了オーバーレイ + リセットボタン | 3.3, 3.5, 3.6 | useScore, SoundService | - |
 | ResetDialog | UI | リセット確認モーダル | 2.4, 2.5 | useScore | - |
 | ControlBar | UI | 下部バー。トグル + ロールバック/リセット | 2.3, 8.1, 8.2 | useScore, useSettings | - |
@@ -511,6 +512,10 @@ type VoiceCommand = 'right' | 'left' | 'rollback' | 'reset';
 interface UseVoiceStateMachineReturn {
   readonly state: VoiceState;
   readonly countdown: number;
+  /** 【Task 9.1】最新の認識結果テキスト（デバッグUI用） */
+  readonly lastTranscript: string;
+  /** 【Task 9.1】最新の認識結果が確定済みか（デバッグUI用） */
+  readonly lastIsFinal: boolean;
   start(): void;
   stop(): void;
 }

@@ -251,3 +251,36 @@
   - Layer 3/4: GitHub Issues として起票（Issue #9: コマンド長文エイリアス、Issue #10: ウェイクワード長文化）
   - テスト: 370テスト全PASS（新規11テスト追加）
   - 実機検証: YouTube 音楽再生環境で良好な精度を確認
+
+- [ ] 9. 音声認識ノイズ耐性改善 Phase 2
+- [x] 9.1 認識結果リアルタイム表示（デバッグUI）
+  - 実地検証で「エンジンが何を返しているか」を目視確認するための計測ツール
+  - useVoiceStateMachine に `lastTranscript` / `lastIsFinal` を追加し、認識結果を UI に公開
+  - ListeningOverlay にリアルタイム認識テキスト表示を追加（interim=黄色、final=緑色）
+  - 新規 DebugTranscriptOverlay コンポーネント: IDLE 状態でも画面右上に認識テキストを半透明表示
+  - RMS dB モニタリング（volumeChangeEventOptions）による音量レベル可視化
+  - テスト: reducer の TRANSCRIPT_RECEIVED アクション、hook の lastTranscript 更新、UI 表示
+  - _Requirements: 追加要件（ノイズ環境診断）_
+
+- [x] 9.2 SpeechRecognizer 設定最適化 + 語彙拡張
+  - 設定最適化: `requiresOnDeviceRecognition: true`, `EXTRA_MASK_OFFENSIVE_WORDS: false`, `EXTRA_ENABLE_BIASING_DEVICE_CONTEXT: true`
+  - ウェイクワード拡張（Issue #10）: 「ヘイスコア」「スコアボード」を追加。音韻分析に基づく5-6モーラの長文化
+  - コマンド語彙拡張（Issue #9）: 「右側」「左側」「右チーム」「左チーム」「取り消し」を追加
+  - contextualStrings の対応拡張
+  - テスト: 新ウェイクワード・新コマンドエイリアスの認識テスト
+  - _Requirements: 4.1, 4.2, 5.1, 5.2_
+
+- [ ] 9.3 (M7) ノイズ耐性改善の実機検証
+  - デバッグUI で認識結果を目視確認（エンジンが誤認識 vs 無音扱いかの判別）
+  - 「ヘイスコア」vs「スコア」の認識率比較
+  - 「右側」vs「右」の認識率比較
+  - Phase 2（AudioSource 変更）ビルドとの比較検証
+  - _Milestone: M7（ノイズ耐性改善 実機検証）_
+
+- [ ] 9.4 expo-speech-recognition フォーク（AudioSource 変更）
+  - expo-speech-recognition v3.1.0 をフォークし、AudioSource を変更
+  - ExpoAudioRecorder.kt: `MediaRecorder.AudioSource.VOICE_RECOGNITION` → `VOICE_COMMUNICATION`
+  - VOICE_COMMUNICATION はノイズ抑制 + エコーキャンセラーを有効化（体育館環境向け）
+  - worktree で分離して検証（main ブランチには影響しない）
+  - expo prebuild --clean + android/app/build.gradle パッチが必要
+  - _Requirements: 4.1, 5.1_

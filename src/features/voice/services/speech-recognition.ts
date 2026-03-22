@@ -48,10 +48,20 @@ export interface SpeechRecognitionOptions {
  * 【根拠】音声認識エンジンがひらがなで返すケースにも対応するため、
  *        漢字/カタカナとひらがなの両方を contextualStrings に含める。
  */
+/**
+ * 【目的】コマンドモードで認識精度を向上させるための語彙リスト（ひらがなエイリアス + Issue #9 拡張）
+ * 【根拠】音声認識エンジンがひらがなで返すケースにも対応し、
+ *        長文エイリアス（右側、左側、取り消し等）も含めることで
+ *        ノイズ環境での認識率を向上させる。
+ */
 const COMMAND_VOCABULARY = [
   '右', '左', 'ロールバック', 'リセット',
   'みぎ', 'みぎー', 'ひだり', 'ひだりー',
   'ろーるばっく', 'りせっと',
+  // 【Task 9.2】Issue #9: 長文エイリアス
+  '右側', '左側', 'みぎがわ', 'ひだりがわ',
+  '右チーム', '左チーム',
+  '取り消し', 'とりけし',
 ] as const;
 
 /**
@@ -147,6 +157,14 @@ export function startRecognition(options: SpeechRecognitionOptions): void {
     currentOptions?.onEnd();
   });
 
+  // 【Task 9.2】音量レベルのモニタリング（デバッグ用）
+  // 【根拠】ノイズ環境の定量的な理解のため、RMS dB をログ出力する。
+  //        intervalMillis=500 で 0.5 秒ごとに発火する。
+  addManagedListener('volumechange', (data: unknown) => {
+    const event = data as { value: number };
+    log('SR', `volume: ${event.value?.toFixed(1) ?? 'N/A'} dB`);
+  });
+
   // 【目的】エラーのイベントリスナー
   addManagedListener('error', (data: unknown) => {
     const event = data as { error: string; message: string };
@@ -174,6 +192,13 @@ function buildStartOptions(
     // 【目的】複数候補を取得して認識精度を向上させる
     // 【根拠】第1候補が不一致でも第2候補以降にコマンドが含まれる可能性を拾う
     maxAlternatives: 5,
+    // 【Task 9.2】オンデバイス認識を明示的に要求（Android 13+）
+    // 【根拠】ネットワーク遅延の排除 + オフライン動作の保証。
+    //        Android 13+ では createOnDeviceSpeechRecognizer を使用する。
+    requiresOnDeviceRecognition: true,
+    // 【Task 9.2】RMS dB モニタリング（デバッグUI用）
+    // 【根拠】ノイズ環境の定量的な理解のため、音量レベルをログ出力する。
+    volumeChangeEventOptions: { enabled: true, intervalMillis: 500 },
   };
 
   // 【目的】短い単語の認識精度を向上させる（全モード共通）
@@ -183,6 +208,10 @@ function buildStartOptions(
   //        Google 開発チームが単一ワード認識に web_search を推奨している。
   baseOptions.androidIntentOptions = {
     EXTRA_LANGUAGE_MODEL: 'web_search',
+    // 【Task 9.2】スポーツ環境の掛け声がマスクされる可能性を排除
+    EXTRA_MASK_OFFENSIVE_WORDS: false,
+    // 【Task 9.2】デバイスコンテキストバイアスを有効化
+    EXTRA_ENABLE_BIASING_DEVICE_CONTEXT: true,
   };
 
   if (options.mode === 'wakeword') {
@@ -190,7 +219,12 @@ function buildStartOptions(
     // 【根拠】contextualStrings に指定することで認識エンジンが優先マッチングする
     // 【目的】伸ばしバリエーションも含めて認識精度を向上させる
     // 【根拠】遠距離からの発話で「スコアー」と伸ばすケースに対応する
-    baseOptions.contextualStrings = ['スコア', 'スコアー', 'すこあ', 'すこあー'];
+    // 【Task 9.2】Issue #10: 長文ウェイクワードを追加
+    baseOptions.contextualStrings = [
+      'スコア', 'スコアー', 'すこあ', 'すこあー',
+      'ヘイスコア', 'へいすこあ',
+      'スコアボード', 'すこあぼーど',
+    ];
   }
 
   if (options.mode === 'command') {

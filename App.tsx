@@ -10,6 +10,7 @@ import { GameEndOverlay } from '@/features/score/components/GameEndOverlay';
 import { ScorePanel } from '@/features/score/components/ScorePanel';
 import { useGameEndWhistle } from '@/features/score/hooks/use-game-end-whistle';
 import { useScore } from '@/features/score/hooks/use-score';
+import { DebugTranscriptOverlay } from '@/features/voice/components/DebugTranscriptOverlay';
 import { ListeningOverlay } from '@/features/voice/components/ListeningOverlay';
 import { useVoiceStateMachine } from '@/features/voice/hooks/use-voice-state-machine';
 import { log } from '@/utils/logger';
@@ -86,7 +87,7 @@ export default function App() {
   // 【根拠】useVoiceStateMachine は内部で useSettings を購読し、
   //        isVoiceRecognitionEnabled の ON/OFF に自動で反応する。
   //        state は ListeningOverlay の表示制御に使用する。
-  const { state: voiceState, countdown } = useVoiceStateMachine();
+  const { state: voiceState, countdown, lastTranscript, lastIsFinal } = useVoiceStateMachine();
 
   return (
     <ErrorBoundary>
@@ -100,6 +101,14 @@ export default function App() {
           <ListeningOverlay
             visible={voiceState === 'LISTENING'}
             countdown={countdown}
+            lastTranscript={lastTranscript}
+            lastIsFinal={lastIsFinal}
+          />
+          {/* 【Task 9.1】IDLE 状態でも認識結果を画面右上にデバッグ表示 */}
+          <DebugTranscriptOverlay
+            visible={voiceState === 'IDLE' && !!lastTranscript}
+            transcript={lastTranscript}
+            isFinal={lastIsFinal}
           />
         </View>
         <ControlBar />

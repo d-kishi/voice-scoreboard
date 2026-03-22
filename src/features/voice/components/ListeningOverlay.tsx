@@ -15,6 +15,10 @@ interface ListeningOverlayProps {
   readonly visible: boolean;
   /** 残り秒数（3→2→1） */
   readonly countdown: number;
+  /** 【Task 9.1】最新の認識結果テキスト（デバッグUI用） */
+  readonly lastTranscript?: string;
+  /** 【Task 9.1】最新の認識結果が確定済みか（デバッグUI用） */
+  readonly lastIsFinal?: boolean;
 }
 
 /**
@@ -30,7 +34,7 @@ interface ListeningOverlayProps {
  *        ResetDialog・GameEndOverlay でもディム効果のみで一貫しているため、
  *        bg-black/60 で統一する。
  */
-export function ListeningOverlay({ visible, countdown }: ListeningOverlayProps) {
+export function ListeningOverlay({ visible, countdown, lastTranscript, lastIsFinal }: ListeningOverlayProps) {
   if (!visible) {
     return null;
   }
@@ -95,6 +99,19 @@ export function ListeningOverlay({ visible, countdown }: ListeningOverlayProps) 
         <Text className="mt-2 text-lg text-gray-400">
           {countdown}s
         </Text>
+
+        {/* 【Task 9.1】認識結果テキストのリアルタイム表示（デバッグUI）
+         * 【根拠】実地検証でエンジンの認識結果を目視確認するための計測ツール。
+         *        interim（未確定）は黄色 + "..." 接尾辞、final（確定）は緑色で表示。
+         */}
+        {lastTranscript ? (
+          <Text
+            testID="listening-transcript"
+            className={`mt-3 text-base ${lastIsFinal ? 'text-green-400' : 'text-yellow-400'}`}
+          >
+            {lastIsFinal ? lastTranscript : `${lastTranscript}...`}
+          </Text>
+        ) : null}
       </View>
     </View>
   );

@@ -31,6 +31,10 @@ export interface VoiceReducerState {
     | 'SPEAKING_SCORE';
   readonly pendingCommand: VoiceCommand | null;
   readonly countdown: number;
+  /** 【Task 9.1】最新の認識結果テキスト（デバッグUI用） */
+  readonly lastTranscript: string;
+  /** 【Task 9.1】最新の認識結果が確定済みか（デバッグUI用） */
+  readonly lastIsFinal: boolean;
 }
 
 /**
@@ -49,7 +53,8 @@ export type VoiceAction =
   | { type: 'SPEECH_ROGER_DONE' }
   | { type: 'COMMAND_EXECUTED_WITH_SCORE' }
   | { type: 'SPEECH_SCORE_DONE' }
-  | { type: 'STOP' };
+  | { type: 'STOP' }
+  | { type: 'TRANSCRIPT_RECEIVED'; transcript: string; isFinal: boolean };
 
 // =================================================================
 // 定数
@@ -60,6 +65,8 @@ export const INITIAL_VOICE_STATE: VoiceReducerState = {
   state: 'IDLE',
   pendingCommand: null,
   countdown: 0,
+  lastTranscript: '',
+  lastIsFinal: false,
 };
 
 /** 【目的】LISTENING 状態のカウントダウン秒数 */
@@ -104,7 +111,7 @@ export function voiceStateReducer(
     // LISTENING → IDLE: 5 秒タイムアウト
     case 'LISTENING_TIMEOUT':
       if (current.state !== 'LISTENING') return current;
-      return { ...INITIAL_VOICE_STATE };
+      return { ...INITIAL_VOICE_STATE, lastTranscript: '', lastIsFinal: false };
 
     // SPEAKING_ROGER → EXECUTING: Roger 読み上げ完了
     case 'SPEECH_ROGER_DONE':
@@ -119,11 +126,15 @@ export function voiceStateReducer(
     // SPEAKING_SCORE → IDLE: スコア読み上げ完了
     case 'SPEECH_SCORE_DONE':
       if (current.state !== 'SPEAKING_SCORE') return current;
-      return { ...INITIAL_VOICE_STATE };
+      return { ...INITIAL_VOICE_STATE, lastTranscript: '', lastIsFinal: false };
 
     // 任意の状態 → IDLE: 外部停止
     case 'STOP':
-      return { ...INITIAL_VOICE_STATE };
+      return { ...INITIAL_VOICE_STATE, lastTranscript: '', lastIsFinal: false };
+
+    // 【Task 9.1】認識結果をメタデータとして保持（状態遷移なし）
+    case 'TRANSCRIPT_RECEIVED':
+      return { ...current, lastTranscript: action.transcript, lastIsFinal: action.isFinal };
 
     default:
       return current;

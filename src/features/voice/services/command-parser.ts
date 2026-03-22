@@ -24,12 +24,23 @@ const COMMAND_MAP: ReadonlyArray<{
   readonly keyword: string;
   readonly command: VoiceCommand;
 }> = [
+  // 【根拠】長い文字列を先に配列に入れることで、短い語彙への誤マッチを防ぐ
   { keyword: 'ロールバック', command: 'rollback' },
   { keyword: 'ろーるばっく', command: 'rollback' },
+  // 【Task 9.2】Issue #9: rollback の長文エイリアス
+  { keyword: '取り消し', command: 'rollback' },
+  { keyword: 'とりけし', command: 'rollback' },
   { keyword: 'リセット', command: 'reset' },
   { keyword: 'りせっと', command: 'reset' },
+  // 【Task 9.2】Issue #9: right/left の長文エイリアス
+  { keyword: '右チーム', command: 'right' },
+  { keyword: '右側', command: 'right' },
+  { keyword: 'みぎがわ', command: 'right' },
   { keyword: '右', command: 'right' },
   { keyword: 'みぎ', command: 'right' },
+  { keyword: '左チーム', command: 'left' },
+  { keyword: '左側', command: 'left' },
+  { keyword: 'ひだりがわ', command: 'left' },
   { keyword: '左', command: 'left' },
   { keyword: 'ひだり', command: 'left' },
 ];

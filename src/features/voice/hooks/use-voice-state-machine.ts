@@ -55,6 +55,10 @@ import { log, warn } from '../../../utils/logger';
 export interface UseVoiceStateMachineReturn {
   readonly state: VoiceState;
   readonly countdown: number;
+  /** 【Task 9.1】最新の認識結果テキスト（デバッグUI用） */
+  readonly lastTranscript: string;
+  /** 【Task 9.1】最新の認識結果が確定済みか（デバッグUI用） */
+  readonly lastIsFinal: boolean;
   start(): void;
   stop(): void;
 }
@@ -166,6 +170,10 @@ export function useVoiceStateMachine(): UseVoiceStateMachineReturn {
       mode: 'wakeword',
       lang: 'ja-JP',
       onResult: (transcript: string, isFinal: boolean, allTranscripts?: string[]) => {
+        // 【Task 9.1】認識結果をデバッグUI用に保持
+        if (isMountedRef.current) {
+          dispatch({ type: 'TRANSCRIPT_RECEIVED', transcript, isFinal });
+        }
         // 【目的】複数候補があれば全候補を走査し、なければ第1候補のみで判定
         const matched = allTranscripts
           ? isWakewordInAlternatives(allTranscripts)
@@ -213,6 +221,8 @@ export function useVoiceStateMachine(): UseVoiceStateMachineReturn {
       lang: 'ja-JP',
       onResult: (transcript: string, isFinal: boolean, allTranscripts?: string[]) => {
         if (!isMountedRef.current) return;
+        // 【Task 9.1】認識結果をデバッグUI用に保持
+        dispatch({ type: 'TRANSCRIPT_RECEIVED', transcript, isFinal });
         // 【目的】複数候補があれば全候補を走査し、なければ第1候補のみで判定
         const command = allTranscripts
           ? parseCommandFromAlternatives(allTranscripts)
@@ -417,6 +427,8 @@ export function useVoiceStateMachine(): UseVoiceStateMachineReturn {
   return {
     state: voiceState.state,
     countdown: voiceState.countdown,
+    lastTranscript: voiceState.lastTranscript,
+    lastIsFinal: voiceState.lastIsFinal,
     start,
     stop,
   };

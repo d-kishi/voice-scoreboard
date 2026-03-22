@@ -260,6 +260,112 @@ describe('voiceStateReducer', () => {
   });
 
   // =================================================================
+  // TRANSCRIPT_RECEIVED アクション（Task 9.1: デバッグUI用）
+  // =================================================================
+  describe('TRANSCRIPT_RECEIVED アクション', () => {
+    it('lastTranscript と lastIsFinal を更新する', () => {
+      const state: VoiceReducerState = { ...INITIAL_VOICE_STATE };
+      const next = voiceStateReducer(state, {
+        type: 'TRANSCRIPT_RECEIVED',
+        transcript: 'スコア',
+        isFinal: true,
+      });
+      expect(next.lastTranscript).toBe('スコア');
+      expect(next.lastIsFinal).toBe(true);
+    });
+
+    it('state を変更しない（メタデータのみ更新）', () => {
+      const listeningState: VoiceReducerState = {
+        ...INITIAL_VOICE_STATE,
+        state: 'LISTENING',
+        countdown: 8,
+        lastTranscript: '',
+        lastIsFinal: false,
+      };
+      const next = voiceStateReducer(listeningState, {
+        type: 'TRANSCRIPT_RECEIVED',
+        transcript: '右',
+        isFinal: false,
+      });
+      expect(next.state).toBe('LISTENING');
+      expect(next.countdown).toBe(8);
+      expect(next.lastTranscript).toBe('右');
+      expect(next.lastIsFinal).toBe(false);
+    });
+
+    it('interim result（isFinal=false）を正しく保持する', () => {
+      const state: VoiceReducerState = { ...INITIAL_VOICE_STATE };
+      const next = voiceStateReducer(state, {
+        type: 'TRANSCRIPT_RECEIVED',
+        transcript: 'すこ',
+        isFinal: false,
+      });
+      expect(next.lastTranscript).toBe('すこ');
+      expect(next.lastIsFinal).toBe(false);
+    });
+
+    it('全状態で受け付ける', () => {
+      const states: VoiceReducerState[] = [
+        { ...INITIAL_VOICE_STATE, state: 'IDLE', lastTranscript: '', lastIsFinal: false },
+        { ...INITIAL_VOICE_STATE, state: 'LISTENING', countdown: 5, lastTranscript: '', lastIsFinal: false },
+        { ...INITIAL_VOICE_STATE, state: 'SPEAKING_ROGER', pendingCommand: 'right', lastTranscript: '', lastIsFinal: false },
+      ];
+      for (const s of states) {
+        const next = voiceStateReducer(s, {
+          type: 'TRANSCRIPT_RECEIVED',
+          transcript: 'test',
+          isFinal: true,
+        });
+        expect(next.lastTranscript).toBe('test');
+        expect(next.state).toBe(s.state);
+      }
+    });
+  });
+
+  // =================================================================
+  // IDLE 遷移時の lastTranscript クリア（Task 9.1）
+  // =================================================================
+  describe('IDLE 遷移時の lastTranscript クリア', () => {
+    it('LISTENING_TIMEOUT で lastTranscript がクリアされる', () => {
+      const state: VoiceReducerState = {
+        ...INITIAL_VOICE_STATE,
+        state: 'LISTENING',
+        countdown: 0,
+        lastTranscript: '何か認識テキスト',
+        lastIsFinal: true,
+      };
+      const next = voiceStateReducer(state, { type: 'LISTENING_TIMEOUT' });
+      expect(next.lastTranscript).toBe('');
+      expect(next.lastIsFinal).toBe(false);
+    });
+
+    it('SPEECH_SCORE_DONE で lastTranscript がクリアされる', () => {
+      const state: VoiceReducerState = {
+        ...INITIAL_VOICE_STATE,
+        state: 'SPEAKING_SCORE',
+        lastTranscript: '右',
+        lastIsFinal: true,
+      };
+      const next = voiceStateReducer(state, { type: 'SPEECH_SCORE_DONE' });
+      expect(next.lastTranscript).toBe('');
+      expect(next.lastIsFinal).toBe(false);
+    });
+
+    it('STOP で lastTranscript がクリアされる', () => {
+      const state: VoiceReducerState = {
+        ...INITIAL_VOICE_STATE,
+        state: 'LISTENING',
+        countdown: 5,
+        lastTranscript: 'スコア',
+        lastIsFinal: true,
+      };
+      const next = voiceStateReducer(state, { type: 'STOP' });
+      expect(next.lastTranscript).toBe('');
+      expect(next.lastIsFinal).toBe(false);
+    });
+  });
+
+  // =================================================================
   // 不正なアクションの無視
   // =================================================================
   describe('不正なアクション', () => {

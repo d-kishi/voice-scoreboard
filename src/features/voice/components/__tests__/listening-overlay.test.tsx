@@ -59,6 +59,37 @@ describe('ListeningOverlay', () => {
     });
   });
 
+  // =================================================================
+  // Task 9.1: 認識テキストのリアルタイム表示
+  // =================================================================
+  describe('認識テキスト表示（Task 9.1）', () => {
+    it('lastTranscript が渡された場合テキストが表示される', () => {
+      render(
+        <ListeningOverlay visible={true} countdown={8} lastTranscript="スコア" lastIsFinal={true} />
+      );
+      expect(screen.getByText('スコア')).toBeTruthy();
+    });
+
+    it('interim result（lastIsFinal=false）は "..." 接尾辞付きで表示される', () => {
+      render(
+        <ListeningOverlay visible={true} countdown={8} lastTranscript="すこ" lastIsFinal={false} />
+      );
+      expect(screen.getByText('すこ...')).toBeTruthy();
+    });
+
+    it('lastTranscript が空文字の場合テキストが表示されない', () => {
+      render(
+        <ListeningOverlay visible={true} countdown={8} lastTranscript="" lastIsFinal={false} />
+      );
+      expect(screen.queryByTestId('listening-transcript')).toBeNull();
+    });
+
+    it('lastTranscript が未指定の場合テキストが表示されない', () => {
+      render(<ListeningOverlay visible={true} countdown={8} />);
+      expect(screen.queryByTestId('listening-transcript')).toBeNull();
+    });
+  });
+
   describe('visible=false の場合', () => {
     it('何も表示されない', () => {
       render(<ListeningOverlay visible={false} countdown={3} />);
